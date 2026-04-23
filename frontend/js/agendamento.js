@@ -15,6 +15,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     await carregarServicos();
     gerarDiasDisponiveis();
     setupHamburger();
+
+    // Adicionar event listener ao formulário (em vez de onsubmit)
+    const form = document.getElementById('agendamento-form');
+    if (form) {
+        form.addEventListener('submit', confirmarAgendamento);
+    }
 });
 
 // ===================== HAMBURGER MENU =====================
@@ -276,18 +282,58 @@ function baixarTicket() {
     const ticket = document.getElementById('ticket');
     if (!ticket) return;
 
-    html2canvas(ticket, {
-        backgroundColor: '#161616',
-        scale: 2,
-        useCORS: true
-    }).then(canvas => {
-        const link = document.createElement('a');
-        link.download = `comprovante-barbecity-${ultimoAgendamento?.hashId || 'ticket'}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-        mostrarToast('🖼️ Comprovante baixado!', 'success');
-    }).catch(err => {
-        mostrarToast('Erro ao gerar imagem. Faça um print da tela.', 'error');
+    // Pré-carregar a logo como base64 para evitar problemas de CORS em mobile
+    const logoImg = ticket.querySelector('.ticket-logo');
+    const logoOriginalSrc = logoImg ? logoImg.src : null;
+
+    // Criar um canvas temporário para converter a logo em base64
+    function preloadLogo(callback) {
+        if (!logoImg || !logoOriginalSrc) {
+            callback();
+            return;
+        }
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = function() {
+            const c = document.createElement('canvas');
+            c.width = img.width;
+            c.height = img.height;
+            const ctx = c.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            logoImg.src = c.toDataURL('image/png');
+            callback();
+        };
+        img.onerror = function() {
+            // Se falhar, mantém a original
+            callback();
+        };
+        img.src = logoOriginalSrc;
+    }
+
+    preloadLogo(function() {
+        html2canvas(ticket, {
+            backgroundColor: '#161616',
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            logging: false
+        }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `comprovante-barbecity-${ultimoAgendamento?.hashId || 'ticket'}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            mostrarToast('🖼️ Comprovante baixado!', 'success');
+            // Restaurar logo original
+            if (logoImg && logoOriginalSrc) {
+                logoImg.src = logoOriginalSrc;
+            }
+        }).catch(err => {
+            mostrarToast('Erro ao gerar imagem. Faça um print da tela.', 'error');
+            // Restaurar logo original
+            if (logoImg && logoOriginalSrc) {
+                logoImg.src = logoOriginalSrc;
+            }
+        });
     });
 }
 

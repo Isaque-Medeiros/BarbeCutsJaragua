@@ -116,16 +116,26 @@
                 document.body.style.overflow = mobileMenu.classList.contains('open') ? 'hidden' : '';
             }
 
-            hamburger.addEventListener('click', toggleMenu);
-            overlay.addEventListener('click', toggleMenu);
+            if (hamburger) {
+                hamburger.addEventListener('click', toggleMenu);
+                overlay.addEventListener('click', toggleMenu);
+            }
 
-            mobileMenu.querySelectorAll('a').forEach(link => {
-                link.addEventListener('click', toggleMenu);
-            });
+            if (mobileMenu) {
+                mobileMenu.querySelectorAll('a').forEach(link => {
+                    link.addEventListener('click', toggleMenu);
+                });
+            }
+
+            // Adicionar event listener ao formulário (em vez de onsubmit)
+            const form = document.getElementById('consulta-form');
+            if (form) {
+                form.addEventListener('submit', consultarAgendamento);
+            }
         });
 
         async function consultarAgendamento(event) {
-            event.preventDefault();
+            if (event) event.preventDefault();
             const hash = document.getElementById('hash-input').value.trim().toLowerCase();
             const resultadoDiv = document.getElementById('consulta-resultado');
             const erroDiv = document.getElementById('consulta-erro');
