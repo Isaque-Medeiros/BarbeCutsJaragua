@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agendar — BarbeCity Jaraguá</title>
+    <meta name="description" content="Agende seu horário na BarbeCity Jaraguá">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" href="/img/logo.jpeg" type="image/jpeg">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="navbar-brand">
+                <img src="/img/logo.jpeg" alt="BarbeCity Jaraguá" class="navbar-logo">
+                <span class="navbar-brand-text">BarbeCity</span>
+            </a>
+            <div class="navbar-links">
+                <a href="/">Início</a>
+                <a href="/agendamento" class="active">Agendar</a>
+                <a href="/meu-agendamento">Meu Agendamento</a>
+            </div>
+            <button class="hamburger" id="hamburger" aria-label="Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-overlay" id="mobile-overlay"></div>
+    <div class="mobile-menu" id="mobile-menu">
+        <a href="/">🏠 Início</a>
+        <a href="/agendamento" class="active">✂️ Agendar</a>
+        <a href="/meu-agendamento">🔍 Meu Agendamento</a>
+    </div>
+
+    <section class="page-section">
+        <div class="container">
+            <div class="section-title">
+                <h1>✂️ Agende seu Horário</h1>
+                <p>Escolha o serviço, data e horário disponível</p>
+            </div>
+
+            <!-- Steps -->
+            <div class="steps" id="steps-indicator">
+                <div class="step active" id="step-1">
+                    <span class="step-number">1</span>
+                    Serviço
+                </div>
+                <div class="step" id="step-2">
+                    <span class="step-number">2</span>
+                    Data
+                </div>
+                <div class="step" id="step-3">
+                    <span class="step-number">3</span>
+                    Dados
+                </div>
+                <div class="step" id="step-4">
+                    <span class="step-number">✓</span>
+                    Ticket
+                </div>
+            </div>
+
+            <div style="max-width: 700px; margin: 0 auto;">
+                <!-- Step 1: Selecionar Serviço -->
+                <div id="step-1-content" class="fade-in">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">💇‍♂️ Escolha o Serviço</span>
+                        </div>
+                        <div id="servicos-selecao" class="grid grid-2" style="margin-top: 0.5rem;">
+                            <div class="loading"><div class="spinner"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Selecionar Data e Horário -->
+                <div id="step-2-content" class="hidden">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">📅 Escolha a Data e Horário</span>
+                            <button class="btn btn-sm btn-secondary" onclick="voltarStep1()">← Voltar</button>
+                        </div>
+
+                        <div style="margin-bottom: 1rem;">
+                            <label class="form-label">Selecione o dia:</label>
+                            <div id="dias-container" class="flex flex-wrap gap-1" style="margin-top: 0.5rem;"></div>
+                        </div>
+
+                        <div id="slots-container">
+                            <p class="text-secondary">Selecione uma data para ver os horários disponíveis.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Formulário e Confirmação -->
+                <div id="step-3-content" class="hidden">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">📝 Seus Dados</span>
+                            <button class="btn btn-sm btn-secondary" onclick="voltarStep2()">← Voltar</button>
+                        </div>
+
+                        <!-- Resumo -->
+                        <div class="resumo-card">
+                            <div class="resumo-row">
+                                <span class="resumo-label">Serviço</span>
+                                <span class="resumo-value" id="resumo-servico">—</span>
+                            </div>
+                            <div class="resumo-row">
+                                <span class="resumo-label">Data</span>
+                                <span class="resumo-value" id="resumo-data">—</span>
+                            </div>
+                            <div class="resumo-row">
+                                <span class="resumo-label">Horário</span>
+                                <span class="resumo-value" id="resumo-horario">—</span>
+                            </div>
+                            <div class="resumo-row">
+                                <span class="resumo-label">Valor</span>
+                                <span class="resumo-total" id="resumo-valor">—</span>
+                            </div>
+                        </div>
+
+                        <form id="agendamento-form" onsubmit="return confirmarAgendamento(event)">
+                            <div class="form-group">
+                                <label class="form-label" for="clienteNome">👤 Seu Nome *</label>
+                                <input type="text" id="clienteNome" class="form-input" placeholder="Digite seu nome" required maxlength="100">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="notaOpcional">📝 Observações sobre o corte <span class="text-muted">(opcional)</span></label>
+                                <textarea id="notaOpcional" class="form-textarea" placeholder="Ex: Máquina 2 dos lados, tesoura em cima, degradê leve..." maxlength="500"></textarea>
+                                <div class="form-hint">Máximo de 500 caracteres</div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="telefoneContato">📱 WhatsApp <span class="text-muted">(opcional)</span></label>
+                                <input type="tel" id="telefoneContato" class="form-input" placeholder="(11) 99999-9999">
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-lg btn-block" id="btn-confirmar">
+                                ✅ Confirmar Agendamento
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Step 4: Sucesso / Ticket -->
+                <div id="step-4-content" class="hidden">
+                    <div class="card" style="text-align: center;">
+                        <div class="check-animated" style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
+                        <h2>Agendamento Confirmado!</h2>
+                        <p class="text-secondary" style="margin-bottom: 1.5rem;">Seu horário foi reservado com sucesso.</p>
+
+                        <!-- Ticket -->
+                        <div id="ticket-container">
+                            <div class="ticket" id="ticket">
+                                <img src="/img/logo.jpeg" alt="BarbeCity" class="ticket-logo">
+                                <div class="ticket-header">BarbeCity Jaraguá</div>
+                                <div class="ticket-divider"></div>
+                                <div class="ticket-info">
+                                    <div class="ticket-row">
+                                        <span class="ticket-label">Cliente</span>
+                                        <span class="ticket-value" id="ticket-cliente">—</span>
+                                    </div>
+                                    <div class="ticket-row">
+                                        <span class="ticket-label">Data</span>
+                                        <span class="ticket-value" id="ticket-data">—</span>
+                                    </div>
+                                    <div class="ticket-row">
+                                        <span class="ticket-label">Horário</span>
+                                        <span class="ticket-value" id="ticket-horario">—</span>
+                                    </div>
+                                    <div class="ticket-row">
+                                        <span class="ticket-label">Serviço</span>
+                                        <span class="ticket-value" id="ticket-servico">—</span>
+                                    </div>
+                                    <div class="ticket-row">
+                                        <span class="ticket-label">Valor</span>
+                                        <span class="ticket-value" id="ticket-valor">—</span>
+                                    </div>
+                                    <div class="ticket-row">
+                                        <span class="ticket-label">Código</span>
+                                        <span class="ticket-value code" id="ticket-codigo">—</span>
+                                    </div>
+                                </div>
+                                <div class="ticket-divider"></div>
+                                <div class="ticket-footer">"Deus é Fiel" ✝️</div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.5rem;">
+                            <a id="whatsapp-link" href="#" target="_blank" class="btn btn-whatsapp btn-lg">
+                                📲 Enviar Confirmação no WhatsApp
+                            </a>
+                            <button onclick="baixarTicket()" class="btn btn-secondary btn-lg">
+                                🖼️ Baixar Comprovante
+                            </button>
+                            <a href="/agendamento" class="btn btn-secondary">
+                                🔄 Novo Agendamento
+                            </a>
+                        </div>
+
+                        <p style="margin-top: 1.5rem; font-size: 0.85rem; color: var(--text-muted);">
+                            ⚠️ Para cancelar, entre em contato pelo WhatsApp: <a href="https://wa.me/5511972244484" target="_blank">(11) 97224-4484</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-brand">✂️ BarbeCity Jaraguá</div>
+            <p>Anderson Barbeiro — Tradição e estilo em cada corte</p>
+            <div class="footer-faith">"Deus é Fiel" ✝️</div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/agendamento.js"></script>
+</body>
+</html>

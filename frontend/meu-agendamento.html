@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Agendamento — BarbeCity Jaraguá</title>
+    <meta name="description" content="Consulte seu agendamento na BarbeCity Jaraguá">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" href="/img/logo.jpeg" type="image/jpeg">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="navbar-brand">
+                <img src="/img/logo.jpeg" alt="BarbeCity Jaraguá" class="navbar-logo">
+                <span class="navbar-brand-text">BarbeCity</span>
+            </a>
+            <div class="navbar-links">
+                <a href="/">Início</a>
+                <a href="/agendamento">Agendar</a>
+                <a href="/meu-agendamento" class="active">Meu Agendamento</a>
+            </div>
+            <button class="hamburger" id="hamburger" aria-label="Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-overlay" id="mobile-overlay"></div>
+    <div class="mobile-menu" id="mobile-menu">
+        <a href="/">🏠 Início</a>
+        <a href="/agendamento">✂️ Agendar</a>
+        <a href="/meu-agendamento" class="active">🔍 Meu Agendamento</a>
+    </div>
+
+    <section class="page-section">
+        <div class="container">
+            <div class="section-title">
+                <h1>🔍 Meu Agendamento</h1>
+                <p>Consulte seu agendamento pelo código de confirmação</p>
+            </div>
+
+            <div class="card consulta-card">
+                <div class="card-header">
+                    <span class="card-title">📋 Consultar Agendamento</span>
+                </div>
+                <form id="consulta-form" onsubmit="return consultarAgendamento(event)">
+                    <div class="form-group">
+                        <label class="form-label" for="hash-input">Código do Agendamento</label>
+                        <input type="text" id="hash-input" class="form-input" placeholder="Ex: a1b2c3d4e5" required maxlength="20" style="font-family: var(--font-mono); letter-spacing: 2px; text-transform: lowercase;">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block btn-lg">
+                        🔍 Consultar
+                    </button>
+                </form>
+
+                <div id="consulta-resultado" class="consulta-result hidden">
+                    <div class="resumo-card" style="margin-top: 1.5rem;">
+                        <div class="resumo-row">
+                            <span class="resumo-label">Cliente</span>
+                            <span class="resumo-value" id="consulta-cliente">—</span>
+                        </div>
+                        <div class="resumo-row">
+                            <span class="resumo-label">Serviço</span>
+                            <span class="resumo-value" id="consulta-servico">—</span>
+                        </div>
+                        <div class="resumo-row">
+                            <span class="resumo-label">Data</span>
+                            <span class="resumo-value" id="consulta-data">—</span>
+                        </div>
+                        <div class="resumo-row">
+                            <span class="resumo-label">Horário</span>
+                            <span class="resumo-value" id="consulta-horario">—</span>
+                        </div>
+                        <div class="resumo-row">
+                            <span class="resumo-label">Valor</span>
+                            <span class="resumo-total" id="consulta-valor">—</span>
+                        </div>
+                        <div class="resumo-row">
+                            <span class="resumo-label">Status</span>
+                            <span id="consulta-status">—</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="consulta-erro" class="hidden" style="margin-top: 1rem; color: var(--danger); text-align: center;"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-brand">✂️ BarbeCity Jaraguá</div>
+            <p>Anderson Barbeiro — Tradição e estilo em cada corte</p>
+            <div class="footer-faith">"Deus é Fiel" ✝️</div>
+        </div>
+    </footer>
+
+    <script src="/js/api.js"></script>
+    <script>
+        // Hamburger Menu
+        document.addEventListener('DOMContentLoaded', () => {
+            const hamburger = document.getElementById('hamburger');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const overlay = document.getElementById('mobile-overlay');
+
+            function toggleMenu() {
+                hamburger.classList.toggle('active');
+                mobileMenu.classList.toggle('open');
+                overlay.classList.toggle('open');
+                document.body.style.overflow = mobileMenu.classList.contains('open') ? 'hidden' : '';
+            }
+
+            hamburger.addEventListener('click', toggleMenu);
+            overlay.addEventListener('click', toggleMenu);
+
+            mobileMenu.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', toggleMenu);
+            });
+        });
+
+        async function consultarAgendamento(event) {
+            event.preventDefault();
+            const hash = document.getElementById('hash-input').value.trim().toLowerCase();
+            const resultadoDiv = document.getElementById('consulta-resultado');
+            const erroDiv = document.getElementById('consulta-erro');
+
+            if (!hash) {
+                erroDiv.textContent = 'Por favor, digite o código do agendamento.';
+                erroDiv.classList.remove('hidden');
+                resultadoDiv.classList.add('hidden');
+                return;
+            }
+
+            erroDiv.classList.add('hidden');
+            resultadoDiv.classList.add('hidden');
+
+            try {
+                const data = await consultarAgendamento(hash);
+                const ag = data.agendamento;
+
+                document.getElementById('consulta-cliente').textContent = ag.clienteNome;
+                document.getElementById('consulta-servico').textContent = ag.servico;
+                document.getElementById('consulta-data').textContent = formatarDataBR(ag.dataHoraInicio);
+                document.getElementById('consulta-horario').textContent = `${formatarHora(ag.dataHoraInicio)} às ${formatarHora(ag.dataHoraFim)}`;
+                document.getElementById('consulta-valor').textContent = formatarMoeda(ag.valor);
+
+                const statusSpan = document.getElementById('consulta-status');
+                statusSpan.innerHTML = `<span class="badge ${getStatusBadge(ag.status)}">${getStatusLabel(ag.status)}</span>`;
+
+                resultadoDiv.classList.remove('hidden');
+                resultadoDiv.classList.add('fade-in');
+
+            } catch (err) {
+                erroDiv.textContent = err.message || 'Agendamento não encontrado. Verifique o código.';
+                erroDiv.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
