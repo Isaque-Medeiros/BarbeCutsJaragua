@@ -454,27 +454,27 @@ def admin_listar_agendamentos():
     conn = get_connection()
     cursor = conn.cursor()
 
-    hoje = date.today().isoformat()
+    hoje = date.today()
     query_params = []
 
-    # Usar ::date no PostgreSQL, date() no SQLite
-    date_func = 'a.data_hora_inicio::date' if is_postgres() else 'date(a.data_hora_inicio)'
-
     if periodo == 'hoje':
-        where = f"WHERE {date_func} = %s"
-        query_params.append(hoje)
+        # Usar intervalo de timestamp (mais compatível com PostgreSQL)
+        data_inicio_str = hoje.isoformat() + 'T00:00:00'
+        data_fim_str = hoje.isoformat() + 'T23:59:59'
+        where = 'WHERE a.data_hora_inicio >= %s AND a.data_hora_inicio <= %s'
+        query_params.extend([data_inicio_str, data_fim_str])
     elif periodo == 'semana':
-        inicio_semana = (date.today() - timedelta(days=date.today().weekday())).isoformat()
-        fim_semana = (date.today() + timedelta(days=6 - date.today().weekday())).isoformat()
-        where = f"WHERE {date_func} >= %s AND {date_func} <= %s"
+        inicio_semana = (hoje - timedelta(days=hoje.weekday())).isoformat() + 'T00:00:00'
+        fim_semana = (hoje + timedelta(days=6 - hoje.weekday())).isoformat() + 'T23:59:59'
+        where = 'WHERE a.data_hora_inicio >= %s AND a.data_hora_inicio <= %s'
         query_params.extend([inicio_semana, fim_semana])
     elif periodo == 'mes':
-        inicio_mes = date.today().replace(day=1).isoformat()
-        where = f"WHERE {date_func} >= %s"
+        inicio_mes = hoje.replace(day=1).isoformat() + 'T00:00:00'
+        where = 'WHERE a.data_hora_inicio >= %s'
         query_params.append(inicio_mes)
     elif periodo == 'personalizado' and data_inicio and data_fim:
-        where = f"WHERE {date_func} >= %s AND {date_func} <= %s"
-        query_params.extend([data_inicio, data_fim])
+        where = 'WHERE a.data_hora_inicio >= %s AND a.data_hora_inicio <= %s'
+        query_params.extend([data_inicio + 'T00:00:00', data_fim + 'T23:59:59'])
     else:
         where = ''
 
@@ -490,7 +490,22 @@ def admin_listar_agendamentos():
     agendamentos = [dict(row) for row in cursor.fetchall()]
     conn.close()
 
+    # Log para debug
+    print(f'[DEBUG] admin_listar_agendamentos: periodo={periodo}, encontrados={len(agendamentos)}')
+    if len(agendamentos) == 0:
+        # Tentar buscar todos os agendamentos sem filtro para debug
+        conn2 = get_connection()
+        c2 = conn2.cursor()
+        c2.execute('SELECT COUNT(*) as total FROM agendamentos')
+        total = dict(c2.fetchone())
+        c2.execute('SELECT id, hash_id, cliente_nome, data_hora_inicio FROM agendamentos ORDER BY data_hora_inicio DESC LIMIT 5')
+        ultimos = [dict(r) for r in c2.fetchall()]
+        conn2.close()
+        print(f'[DEBUG] Total de agendamentos no banco: {total}')
+        print(f'[DEBUG] Últimos 5 agendamentos: {ultimos}')
+
     return jsonify_com_datas({'agendamentos': agendamentos})
+
 
 
 @app.route('/api/admin/financeiro', methods=['GET'])
@@ -506,27 +521,26 @@ def admin_financeiro():
     conn = get_connection()
     cursor = conn.cursor()
 
-    hoje = date.today().isoformat()
+    hoje = date.today()
     query_params = []
 
-    # Usar ::date no PostgreSQL, date() no SQLite
-    date_func = 'a.data_hora_inicio::date' if is_postgres() else 'date(a.data_hora_inicio)'
-
     if periodo == 'hoje':
-        where = f"WHERE {date_func} = %s"
-        query_params.append(hoje)
+        data_inicio_str = hoje.isoformat() + 'T00:00:00'
+        data_fim_str = hoje.isoformat() + 'T23:59:59'
+        where = 'WHERE a.data_hora_inicio >= %s AND a.data_hora_inicio <= %s'
+        query_params.extend([data_inicio_str, data_fim_str])
     elif periodo == 'semana':
-        inicio_semana = (date.today() - timedelta(days=date.today().weekday())).isoformat()
-        fim_semana = (date.today() + timedelta(days=6 - date.today().weekday())).isoformat()
-        where = f"WHERE {date_func} >= %s AND {date_func} <= %s"
+        inicio_semana = (hoje - timedelta(days=hoje.weekday())).isoformat() + 'T00:00:00'
+        fim_semana = (hoje + timedelta(days=6 - hoje.weekday())).isoformat() + 'T23:59:59'
+        where = 'WHERE a.data_hora_inicio >= %s AND a.data_hora_inicio <= %s'
         query_params.extend([inicio_semana, fim_semana])
     elif periodo == 'mes':
-        inicio_mes = date.today().replace(day=1).isoformat()
-        where = f"WHERE {date_func} >= %s"
+        inicio_mes = hoje.replace(day=1).isoformat() + 'T00:00:00'
+        where = 'WHERE a.data_hora_inicio >= %s'
         query_params.append(inicio_mes)
     elif periodo == 'personalizado' and data_inicio and data_fim:
-        where = f"WHERE {date_func} >= %s AND {date_func} <= %s"
-        query_params.extend([data_inicio, data_fim])
+        where = 'WHERE a.data_hora_inicio >= %s AND a.data_hora_inicio <= %s'
+        query_params.extend([data_inicio + 'T00:00:00', data_fim + 'T23:59:59'])
     else:
         where = ''
 
