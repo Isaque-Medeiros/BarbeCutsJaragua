@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Admin — Barbearia</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="navbar-brand">⚙️ Painel Admin</a>
+            <div class="navbar-links">
+                <a href="/">← Site</a>
+                <a href="/admin" class="active">Painel</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="page-section">
+        <div class="container">
+            <div style="max-width: 400px; margin: 0 auto;">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">🔐 Acesso Restrito</span>
+                    </div>
+                    <form id="login-form" onsubmit="return fazerLogin(event)">
+                        <div class="form-group">
+                            <label class="form-label">Senha de Administrador</label>
+                            <input type="password" id="admin-password" class="form-input" placeholder="Digite a senha" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">Entrar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Screen -->
+    <div id="dashboard-screen" class="hidden">
+        <section class="page-section">
+            <div class="container">
+                <!-- Filtros -->
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex flex-wrap gap-1">
+                            <button class="btn btn-sm btn-primary" onclick="filtrarPeriodo('hoje')" id="filtro-hoje">Hoje</button>
+                            <button class="btn btn-sm btn-secondary" onclick="filtrarPeriodo('semana')" id="filtro-semana">Semana</button>
+                            <button class="btn btn-sm btn-secondary" onclick="filtrarPeriodo('mes')" id="filtro-mes">Mês</button>
+                            <button class="btn btn-sm btn-secondary" onclick="filtrarPeriodo('todos')" id="filtro-todos">Todos</button>
+                        </div>
+                        <div class="flex gap-1">
+                            <button class="btn btn-sm btn-secondary" onclick="abrirModalServico()">➕ Novo Serviço</button>
+                            <button class="btn btn-sm btn-secondary" onclick="abrirModalBloqueio()">🔒 Bloquear Data</button>
+                            <button class="btn btn-sm btn-danger" onclick="sairAdmin()">🚪 Sair</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="stats-grid" id="stats-container">
+                    <div class="loading"><div class="spinner"></div></div>
+                </div>
+
+                <!-- Tabela de Agendamentos -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">📋 Agendamentos</span>
+                        <span id="agendamentos-count" class="text-secondary"></span>
+                    </div>
+                    <div class="table-container" id="agendamentos-table">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                </div>
+
+                <!-- Serviços -->
+                <div class="card" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <span class="card-title">💇‍♂️ Serviços</span>
+                    </div>
+                    <div class="table-container" id="servicos-table">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                </div>
+
+                <!-- Bloqueios -->
+                <div class="card" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <span class="card-title">🔒 Bloqueios</span>
+                    </div>
+                    <div id="bloqueios-list">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Modal: Editar Agendamento -->
+    <div class="modal-overlay" id="modal-editar-agendamento">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Editar Agendamento</h3>
+                <button class="modal-close" onclick="fecharModal('modal-editar-agendamento')">✕</button>
+            </div>
+            <form id="form-editar-agendamento" onsubmit="return salvarEdicaoAgendamento(event)">
+                <input type="hidden" id="edit-ag-id">
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select id="edit-status" class="form-select">
+                        <option value="agendado">Agendado</option>
+                        <option value="concluido">Concluído</option>
+                        <option value="cancelado">Cancelado</option>
+                        <option value="ausente">Ausente</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Valor Pago (R$)</label>
+                    <input type="number" id="edit-valor" class="form-input" step="0.01" min="0">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Salvar Alterações</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Novo Serviço -->
+    <div class="modal-overlay" id="modal-novo-servico">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Novo Serviço</h3>
+                <button class="modal-close" onclick="fecharModal('modal-novo-servico')">✕</button>
+            </div>
+            <form id="form-novo-servico" onsubmit="return criarServico(event)">
+                <div class="form-group">
+                    <label class="form-label">Nome do Serviço</label>
+                    <input type="text" id="novo-servico-nome" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Descrição</label>
+                    <input type="text" id="novo-servico-desc" class="form-input">
+                </div>
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Duração (min)</label>
+                        <input type="number" id="novo-servico-duracao" class="form-input" required min="10" value="30">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Valor (R$)</label>
+                        <input type="number" id="novo-servico-valor" class="form-input" required step="0.01" min="0" value="35">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Criar Serviço</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Editar Serviço -->
+    <div class="modal-overlay" id="modal-editar-servico">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Editar Serviço</h3>
+                <button class="modal-close" onclick="fecharModal('modal-editar-servico')">✕</button>
+            </div>
+            <form id="form-editar-servico" onsubmit="return atualizarServico(event)">
+                <input type="hidden" id="edit-servico-id">
+                <div class="form-group">
+                    <label class="form-label">Nome do Serviço</label>
+                    <input type="text" id="edit-servico-nome" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Descrição</label>
+                    <input type="text" id="edit-servico-desc" class="form-input">
+                </div>
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Duração (min)</label>
+                        <input type="number" id="edit-servico-duracao" class="form-input" required min="10">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Valor (R$)</label>
+                        <input type="number" id="edit-servico-valor" class="form-input" required step="0.01" min="0">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select id="edit-servico-ativo" class="form-select">
+                        <option value="1">Ativo</option>
+                        <option value="0">Inativo</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Salvar Alterações</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Bloquear Data -->
+    <div class="modal-overlay" id="modal-bloqueio">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Bloquear Data/Horário</h3>
+                <button class="modal-close" onclick="fecharModal('modal-bloqueio')">✕</button>
+            </div>
+            <form id="form-bloqueio" onsubmit="return criarBloqueio(event)">
+                <div class="form-group">
+                    <label class="form-label">Data</label>
+                    <input type="date" id="bloqueio-data" class="form-input" required>
+                </div>
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Hora Início <span class="text-secondary">(opcional)</span></label>
+                        <input type="time" id="bloqueio-hora-inicio" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Hora Fim <span class="text-secondary">(opcional)</span></label>
+                        <input type="time" id="bloqueio-hora-fim" class="form-input">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Motivo</label>
+                    <input type="text" id="bloqueio-motivo" class="form-input" placeholder="Ex: Feriado, Férias...">
+                </div>
+                <button type="submit" class="btn btn-danger btn-block">Bloquear</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/admin.js"></script>
+</body>
+</html>

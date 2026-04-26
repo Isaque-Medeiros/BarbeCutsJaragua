@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: barbecity-jaragua
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: cd backend && gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: ADMIN_SECRET
+        value: admbarber1904
+      - key: SITE_URL
+        value: https://barbecity-jaragua.onrender.com
+      - key: WHATSAPP_NUMBER
+        value: 5511972244484
+      - key: BARBEARIA_NOME
+        value: BarbeCity Jaraguá
+      - key: FLASK_DEBUG
+        value: false
+      - key: DATABASE_URL
+        fromService:
+          name: barbecity-db
+          type: postgres
+          property: connectionString
+
+  - type: postgres
+    name: barbecity-db
+    plan: free
+    ipAllowList: []
+    databaseName: barbecity
+    user: barbecity_user

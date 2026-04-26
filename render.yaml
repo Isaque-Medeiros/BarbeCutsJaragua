@@ -2,7 +2,7 @@ services:
   - type: web
     name: barbecity-jaragua
     env: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r backend/requirements.txt
     startCommand: cd backend && gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
     envVars:
       - key: PYTHON_VERSION
@@ -17,15 +17,3 @@ services:
         value: BarbeCity Jaraguá
       - key: FLASK_DEBUG
         value: false
-      - key: DATABASE_URL
-        fromService:
-          name: barbecity-db
-          type: postgres
-          property: connectionString
-
-  - type: postgres
-    name: barbecity-db
-    plan: free
-    ipAllowList: []
-    databaseName: barbecity
-    user: barbecity_user
