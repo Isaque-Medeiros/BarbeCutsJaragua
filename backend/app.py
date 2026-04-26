@@ -192,16 +192,10 @@ def buscar_horarios():
     data_inicio = f"{data_str}T00:00:00"
     data_fim = f"{data_str}T23:59:59"
     
-    if is_postgres():
-        cursor.execute(
-            'SELECT * FROM agendamentos WHERE data_hora_inicio >= %s::timestamp AND data_hora_inicio <= %s::timestamp',
-            (data_inicio, data_fim)
-        )
-    else:
-        cursor.execute(
-            'SELECT * FROM agendamentos WHERE data_hora_inicio >= ? AND data_hora_inicio <= ?',
-            (data_inicio, data_fim)
-        )
+    cursor.execute(
+        'SELECT * FROM agendamentos WHERE data_hora_inicio >= %s AND data_hora_inicio <= %s',
+        (data_inicio, data_fim)
+    )
     agendamentos = [dict(row) for row in cursor.fetchall()]
 
     # Buscar bloqueios para a data
@@ -284,18 +278,11 @@ def criar_agendamento():
     data_hora_fim = dt_fim.isoformat()
 
     # Buscar agendamentos conflitantes
-    if is_postgres():
-        cursor.execute('''
-            SELECT * FROM agendamentos
-            WHERE data_hora_inicio < %s::timestamp AND data_hora_fim > %s::timestamp
-            AND status != 'cancelado'
-        ''', (data_hora_fim, data_hora_inicio))
-    else:
-        cursor.execute('''
-            SELECT * FROM agendamentos
-            WHERE data_hora_inicio < ? AND data_hora_fim > ?
-            AND status != 'cancelado'
-        ''', (data_hora_fim, data_hora_inicio))
+    cursor.execute('''
+        SELECT * FROM agendamentos
+        WHERE data_hora_inicio < %s AND data_hora_fim > %s
+        AND status != 'cancelado'
+    ''', (data_hora_fim, data_hora_inicio))
     conflitantes = [dict(row) for row in cursor.fetchall()]
 
     # Buscar bloqueios para a data
@@ -828,9 +815,10 @@ def initialize_database_once():
     print('[OK] Sistema BarbeCity Jaraguá iniciado!')
 
 
-# Inicializar banco ao importar (para gunicorn)
+# Inicializar banco ao importar (para gunicorn e Vercel)
 initialize_database_once()
 
+# Para execução local
 if __name__ == '__main__':
     import sys
     import io

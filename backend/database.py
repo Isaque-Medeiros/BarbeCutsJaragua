@@ -16,17 +16,19 @@ def get_connection():
         database_url.startswith('postgres://')
         or database_url.startswith('postgresql://')
     ):
-        # PostgreSQL (Render)
+        # PostgreSQL (Neon.tech / Render / Vercel)
         import psycopg2
         import psycopg2.extras
         
-        # Converter URL do Render para formato do psycopg2
+        # Converter URL do Render/Neon para formato do psycopg2
         if database_url.startswith('postgres://'):
             database_url = database_url.replace('postgres://', 'postgresql://', 1)
         
+        # Configurar SSL para Neon.tech (exigido)
         conn = psycopg2.connect(
             database_url,
-            cursor_factory=psycopg2.extras.RealDictCursor
+            cursor_factory=psycopg2.extras.RealDictCursor,
+            sslmode='require'
         )
         conn.autocommit = False
         return conn
@@ -41,9 +43,6 @@ def get_connection():
         conn.execute("PRAGMA foreign_keys=ON;")
         
         # Adaptar o cursor do SQLite para aceitar %s como placeholder (igual PostgreSQL)
-        original_execute = conn.cursor().execute
-        original_executemany = conn.cursor().executemany
-        
         class CursorAdapter:
             def __init__(self, cursor):
                 self.cursor = cursor
