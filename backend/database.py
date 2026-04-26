@@ -125,8 +125,8 @@ def seed_default_data():
     cursor = conn.cursor()
 
     # Serviços padrão
-    cursor.execute('SELECT COUNT(*) FROM servicos')
-    if cursor.fetchone()[0] == 0:
+    cursor.execute('SELECT COUNT(*) AS total FROM servicos')
+    if cursor.fetchone()['total'] == 0:
         servicos = [
             ('Corte Social', 'Corte tradicional com tesoura e máquina', 30, 35.00),
             ('Barba', 'Aparação e modelagem de barba', 20, 20.00),
@@ -140,8 +140,8 @@ def seed_default_data():
         )
 
     # Horários padrão (seg-sex 08:00-19:00, sáb 08:00-17:00)
-    cursor.execute('SELECT COUNT(*) FROM configuracao_horarios')
-    if cursor.fetchone()[0] == 0:
+    cursor.execute('SELECT COUNT(*) AS total FROM configuracao_horarios')
+    if cursor.fetchone()['total'] == 0:
         horarios = [
             (0, '00:00', '00:00', 0, 30),  # Domingo - fechado
             (1, '08:00', '19:00', 1, 30),  # Segunda
