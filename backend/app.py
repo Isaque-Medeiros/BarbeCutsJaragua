@@ -9,6 +9,10 @@ import json
 from datetime import datetime, timedelta, date
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+from dotenv import load_dotenv
+
+# Carregar variáveis de ambiente do arquivo .env
+load_dotenv()
 
 from database import get_connection, init_db, seed_default_data
 from services import (
@@ -97,7 +101,7 @@ def buscar_horarios():
     cursor = conn.cursor()
 
     # Buscar serviço
-    cursor.execute('SELECT * FROM servicos WHERE id = ? AND ativo = 1', (servico_id,))
+    cursor.execute('SELECT * FROM servicos WHERE id = %s AND ativo = 1', (servico_id,))
     servico = cursor.fetchone()
     if not servico:
         conn.close()
@@ -114,7 +118,7 @@ def buscar_horarios():
 
     # Buscar configuração de horário para o dia da semana
     cursor.execute(
-        'SELECT * FROM configuracao_horarios WHERE dia_semana = ?',
+        'SELECT * FROM configuracao_horarios WHERE dia_semana = %s',
         (dia_semana,)
     )
     config_horario = cursor.fetchone()
@@ -134,13 +138,13 @@ def buscar_horarios():
     data_inicio = f"{data_str}T00:00:00"
     data_fim = f"{data_str}T23:59:59"
     cursor.execute(
-        'SELECT * FROM agendamentos WHERE data_hora_inicio >= ? AND data_hora_inicio <= ?',
+        'SELECT * FROM agendamentos WHERE data_hora_inicio >= %s AND data_hora_inicio <= %s',
         (data_inicio, data_fim)
     )
     agendamentos = [dict(row) for row in cursor.fetchall()]
 
     # Buscar bloqueios para a data
-    cursor.execute('SELECT * FROM bloqueios WHERE data = ?', (data_str,))
+    cursor.execute('SELECT * FROM bloqueios WHERE data = %s', (data_str,))
     bloqueios = [dict(row) for row in cursor.fetchall()]
 
     conn.close()
@@ -187,7 +191,7 @@ def criar_agendamento():
     cursor = conn.cursor()
 
     # Buscar serviço
-    cursor.execute('SELECT * FROM servicos WHERE id = ? AND ativo = 1', (servico_id,))
+    cursor.execute('SELECT * FROM servicos WHERE id = %s AND ativo = 1', (servico_id,))
     servico = cursor.fetchone()
     if not servico:
         conn.close()
@@ -227,7 +231,7 @@ def criar_agendamento():
 
     # Buscar bloqueios para a data
     data_str = dt_inicio.strftime('%Y-%m-%d')
-    cursor.execute('SELECT * FROM bloqueios WHERE data = ?', (data_str,))
+    cursor.execute('SELECT * FROM bloqueios WHERE data = %s', (data_str,))
     bloqueios = [dict(row) for row in cursor.fetchall()]
 
     # Validar agendamento
@@ -256,7 +260,7 @@ def criar_agendamento():
         (id, hash_id, cliente_nome, servico_id, valor_pago, valor_original,
          data_hora_inicio, data_hora_fim, status, nota_opcional,
          telefone_contato, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     ''', (
         ag_id, hash_id, cliente_nome, servico_id, 0, servico['valor'],
         data_hora_inicio, data_hora_fim, 'agendado', nota_opcional,
@@ -465,7 +469,7 @@ def admin_atualizar_agendamento(ag_id):
     params = []
 
     if 'valorPago' in dados:
-        updates.append('valor_pago = ?')
+        updates.append('valor_pago = %s')
         params.append(dados['valorPago'])
 
     if 'status' in dados:
@@ -473,19 +477,19 @@ def admin_atualizar_agendamento(ag_id):
         if dados['status'] not in status_validos:
             conn.close()
             return jsonify({'erro': f'Status inválido. Use: {", ".join(status_validos)}'}), 400
-        updates.append('status = ?')
+        updates.append('status = %s')
         params.append(dados['status'])
 
     if not updates:
         conn.close()
         return jsonify({'erro': 'Nenhum campo para atualizar.'}), 400
 
-    updates.append('updated_at = ?')
+    updates.append('updated_at = %s')
     params.append(datetime.now().isoformat())
     params.append(ag_id)
 
     cursor.execute(
-        f'UPDATE agendamentos SET {", ".join(updates)} WHERE id = ?',
+        f'UPDATE agendamentos SET {", ".join(updates)} WHERE id = %s',
         params
     )
 
@@ -561,7 +565,7 @@ def admin_criar_servico():
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        'INSERT INTO servicos (nome, descricao, duracao_minutos, valor) VALUES (?, ?, ?, ?)',
+        'INSERT INTO servicos (nome, descricao, duracao_minutos, valor) VALUES (%s, %s, %s, %s)',
         (nome, descricao, duracao, valor)
     )
     conn.commit()
@@ -588,19 +592,19 @@ def admin_atualizar_servico(servico_id):
     params = []
 
     if 'nome' in dados:
-        updates.append('nome = ?')
+        updates.append('nome = %s')
         params.append(dados['nome'])
     if 'descricao' in dados:
-        updates.append('descricao = ?')
+        updates.append('descricao = %s')
         params.append(dados['descricao'])
     if 'duracaoMinutos' in dados:
-        updates.append('duracao_minutos = ?')
+        updates.append('duracao_minutos = %s')
         params.append(dados['duracaoMinutos'])
     if 'valor' in dados:
-        updates.append('valor = ?')
+        updates.append('valor = %s')
         params.append(dados['valor'])
     if 'ativo' in dados:
-        updates.append('ativo = ?')
+        updates.append('ativo = %s')
         params.append(1 if dados['ativo'] else 0)
 
     if not updates:
@@ -609,7 +613,7 @@ def admin_atualizar_servico(servico_id):
 
     params.append(servico_id)
     cursor.execute(
-        f'UPDATE servicos SET {", ".join(updates)} WHERE id = ?',
+        f'UPDATE servicos SET {", ".join(updates)} WHERE id = %s',
         params
     )
 
@@ -631,7 +635,7 @@ def admin_desativar_servico(servico_id):
 
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('UPDATE servicos SET ativo = 0 WHERE id = ?', (servico_id,))
+    cursor.execute('UPDATE servicos SET ativo = 0 WHERE id = %s', (servico_id,))
 
     if cursor.rowcount == 0:
         conn.close()
@@ -683,7 +687,7 @@ def admin_criar_bloqueio():
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        'INSERT INTO bloqueios (id, data, hora_inicio, hora_fim, motivo) VALUES (?, ?, ?, ?, ?)',
+        'INSERT INTO bloqueios (id, data, hora_inicio, hora_fim, motivo) VALUES (%s, %s, %s, %s, %s)',
         (bl_id, data, hora_inicio, hora_fim, motivo)
     )
     conn.commit()
@@ -700,7 +704,7 @@ def admin_remover_bloqueio(bl_id):
 
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('DELETE FROM bloqueios WHERE id = ?', (bl_id,))
+    cursor.execute('DELETE FROM bloqueios WHERE id = %s', (bl_id,))
 
     if cursor.rowcount == 0:
         conn.close()

@@ -17,3 +17,15 @@ services:
         value: BarbeCity Jaraguá
       - key: FLASK_DEBUG
         value: false
+      - key: DATABASE_URL
+        fromService:
+          name: barbecity-db
+          type: postgres
+          property: connectionString
+
+  - type: postgres
+    name: barbecity-db
+    plan: free
+    ipAllowList: []
+    databaseName: barbecity
+    user: barbecity_user

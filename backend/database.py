@@ -1,23 +1,38 @@
 """
-database.py — Configuração e inicialização do banco SQLite
+database.py — Configuração e inicialização do banco de dados
 ===========================================================
-Gerencia a criação das tabelas e conexão com o banco de dados.
+Gerencia a criação das tabelas e conexão com SQLite (local) e PostgreSQL (produção).
 """
 
-import sqlite3
 import os
 from datetime import datetime
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'barbearia.db')
-
-
+# Configuração do banco de dados
 def get_connection():
-    """Retorna uma conexão com o banco SQLite."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL;")
-    conn.execute("PRAGMA foreign_keys=ON;")
-    return conn
+    """Retorna uma conexão com o banco de dados (SQLite local ou PostgreSQL produção)."""
+    database_url = os.environ.get('DATABASE_URL')
+    
+    if database_url and database_url.startswith('postgres://'):
+        # PostgreSQL (Render)
+        import psycopg2
+        import psycopg2.extras
+        
+        # Converter URL do Render para formato do psycopg2
+        if database_url.startswith('postgres://'):
+            database_url = database_url.replace('postgres://', 'postgresql://', 1)
+        
+        conn = psycopg2.connect(database_url)
+        conn.autocommit = False
+        return conn
+    else:
+        # SQLite (desenvolvimento local)
+        import sqlite3
+        DB_PATH = os.path.join(os.path.dirname(__file__), 'barbearia.db')
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA foreign_keys=ON;")
+        return conn
 
 
 def init_db():
@@ -28,11 +43,11 @@ def init_db():
     # Tabela: servicos
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS servicos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nome TEXT NOT NULL,
+            id SERIAL PRIMARY KEY,
+            nome VARCHAR NOT NULL,
             descricao TEXT DEFAULT '',
             duracao_minutos INTEGER NOT NULL,
-            valor REAL NOT NULL,
+            valor DECIMAL(10,2) NOT NULL,
             ativo INTEGER NOT NULL DEFAULT 1
         )
     ''')
@@ -40,19 +55,19 @@ def init_db():
     # Tabela: agendamentos
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS agendamentos (
-            id TEXT PRIMARY KEY,
-            hash_id TEXT NOT NULL UNIQUE,
-            cliente_nome TEXT NOT NULL,
+            id VARCHAR PRIMARY KEY,
+            hash_id VARCHAR NOT NULL UNIQUE,
+            cliente_nome VARCHAR NOT NULL,
             servico_id INTEGER NOT NULL,
-            valor_pago REAL DEFAULT 0,
-            valor_original REAL NOT NULL,
-            data_hora_inicio TEXT NOT NULL,
-            data_hora_fim TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'agendado',
+            valor_pago DECIMAL(10,2) DEFAULT 0,
+            valor_original DECIMAL(10,2) NOT NULL,
+            data_hora_inicio TIMESTAMP NOT NULL,
+            data_hora_fim TIMESTAMP NOT NULL,
+            status VARCHAR NOT NULL DEFAULT 'agendado',
             nota_opcional TEXT DEFAULT '',
-            telefone_contato TEXT DEFAULT '',
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL,
+            telefone_contato VARCHAR DEFAULT '',
+            created_at TIMESTAMP NOT NULL,
+            updated_at TIMESTAMP NOT NULL,
             FOREIGN KEY (servico_id) REFERENCES servicos(id)
         )
     ''')
@@ -60,10 +75,10 @@ def init_db():
     # Tabela: bloqueios
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS bloqueios (
-            id TEXT PRIMARY KEY,
-            data TEXT NOT NULL,
-            hora_inicio TEXT DEFAULT '',
-            hora_fim TEXT DEFAULT '',
+            id VARCHAR PRIMARY KEY,
+            data DATE NOT NULL,
+            hora_inicio VARCHAR DEFAULT '',
+            hora_fim VARCHAR DEFAULT '',
             motivo TEXT DEFAULT ''
         )
     ''')
@@ -71,10 +86,10 @@ def init_db():
     # Tabela: configuracao_horarios
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS configuracao_horarios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             dia_semana INTEGER NOT NULL,
-            abertura TEXT NOT NULL,
-            fechamento TEXT NOT NULL,
+            abertura VARCHAR NOT NULL,
+            fechamento VARCHAR NOT NULL,
             ativo INTEGER NOT NULL DEFAULT 1,
             intervalo_corte_minutos INTEGER NOT NULL DEFAULT 30
         )
@@ -114,7 +129,7 @@ def seed_default_data():
             ('Hidratação Capilar', 'Hidratação completa dos fios', 30, 30.00),
         ]
         cursor.executemany(
-            'INSERT INTO servicos (nome, descricao, duracao_minutos, valor) VALUES (?, ?, ?, ?)',
+            'INSERT INTO servicos (nome, descricao, duracao_minutos, valor) VALUES (%s, %s, %s, %s)',
             servicos
         )
 
@@ -131,7 +146,7 @@ def seed_default_data():
             (6, '08:00', '17:00', 1, 30),  # Sábado
         ]
         cursor.executemany(
-            'INSERT INTO configuracao_horarios (dia_semana, abertura, fechamento, ativo, intervalo_corte_minutos) VALUES (?, ?, ?, ?, ?)',
+            'INSERT INTO configuracao_horarios (dia_semana, abertura, fechamento, ativo, intervalo_corte_minutos) VALUES (%s, %s, %s, %s, %s)',
             horarios
         )
 
