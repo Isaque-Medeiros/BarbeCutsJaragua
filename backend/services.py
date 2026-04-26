@@ -227,8 +227,9 @@ def calcular_resumo_financeiro(agendamentos: list) -> dict:
 
     for ag in agendamentos:
         if ag['status'] == 'concluido':
-            total_bruto += ag['valor_original']
-            total_liquido += ag['valor_pago'] if ag['valor_pago'] else ag['valor_original']
+            # Converter para float para evitar erro com decimal.Decimal do PostgreSQL
+            total_bruto += float(ag['valor_original'])
+            total_liquido += float(ag['valor_pago']) if ag['valor_pago'] else float(ag['valor_original'])
             concluidos += 1
         elif ag['status'] == 'cancelado':
             cancelados += 1
