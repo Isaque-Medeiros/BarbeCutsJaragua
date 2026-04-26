@@ -215,7 +215,7 @@ def criar_agendamento():
 
     # Buscar configuração de horário
     cursor.execute(
-        'SELECT * FROM configuracao_horarios WHERE dia_semana = ?',
+        'SELECT * FROM configuracao_horarios WHERE dia_semana = %s',
         (dia_semana,)
     )
     config_horario = cursor.fetchone()
@@ -231,7 +231,7 @@ def criar_agendamento():
     # Buscar agendamentos conflitantes
     cursor.execute('''
         SELECT * FROM agendamentos
-        WHERE data_hora_inicio < ? AND data_hora_fim > ?
+        WHERE data_hora_inicio < %s AND data_hora_fim > %s
         AND status != 'cancelado'
     ''', (data_hora_fim, data_hora_inicio))
     conflitantes = [dict(row) for row in cursor.fetchall()]
@@ -329,7 +329,7 @@ def consultar_agendamento():
         SELECT a.*, s.nome as servico_nome, s.duracao_minutos
         FROM agendamentos a
         JOIN servicos s ON a.servico_id = s.id
-        WHERE a.hash_id = ?
+        WHERE a.hash_id = %s
     ''', (hash_id,))
     agendamento = cursor.fetchone()
     conn.close()
@@ -520,7 +520,7 @@ def admin_cancelar_agendamento(ag_id):
     cursor = conn.cursor()
 
     cursor.execute(
-        'UPDATE agendamentos SET status = ?, updated_at = ? WHERE id = ?',
+        'UPDATE agendamentos SET status = %s, updated_at = %s WHERE id = %s',
         ('cancelado', datetime.now().isoformat(), ag_id)
     )
 
