@@ -29,14 +29,22 @@ _db_initialized = False
 
 # ===================== CONVERSOR DE DATAS PARA JSON =====================
 
-class CustomJSONEncoder(json.JSONEncoder):
-    """Encoder JSON que converte datetime e date para string ISO."""
-    def default(self, obj):
-        if isinstance(obj, (datetime, date)):
-            return obj.isoformat()
-        return super().default(obj)
+def converter_datas(obj):
+    """Converte recursivamente objetos datetime/date para string ISO em dicts e listas."""
+    if isinstance(obj, dict):
+        return {k: converter_datas(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [converter_datas(item) for item in obj]
+    elif isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    return obj
 
-app.json_encoder = CustomJSONEncoder
+
+def jsonify_com_datas(*args, **kwargs):
+    """jsonify que converte automaticamente datetime/date para string ISO."""
+    data = converter_datas(args[0] if args else kwargs)
+    return jsonify(data)
+
 
 
 # ===================== TRATAMENTO DE ERROS GLOBAL =====================
@@ -213,7 +221,7 @@ def buscar_horarios():
         bloqueios=bloqueios
     )
 
-    return jsonify({
+    return jsonify_com_datas({
         'data': data_str,
         'diaSemana': dia_semana,
         'servico': servico,
@@ -393,7 +401,7 @@ def consultar_agendamento():
         return jsonify({'erro': 'Agendamento não encontrado.'}), 404
 
     ag = dict(agendamento)
-    return jsonify({
+    return jsonify_com_datas({
         'agendamento': {
             'hashId': ag['hash_id'],
             'clienteNome': ag['cliente_nome'],
@@ -482,7 +490,7 @@ def admin_listar_agendamentos():
     agendamentos = [dict(row) for row in cursor.fetchall()]
     conn.close()
 
-    return jsonify({'agendamentos': agendamentos})
+    return jsonify_com_datas({'agendamentos': agendamentos})
 
 
 @app.route('/api/admin/financeiro', methods=['GET'])
