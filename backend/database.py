@@ -12,7 +12,10 @@ def get_connection():
     """Retorna uma conexão com o banco de dados (SQLite local ou PostgreSQL produção)."""
     database_url = os.environ.get('DATABASE_URL')
     
-    if database_url and database_url.startswith('postgres://'):
+    if database_url and (
+        database_url.startswith('postgres://')
+        or database_url.startswith('postgresql://')
+    ):
         # PostgreSQL (Render)
         import psycopg2
         import psycopg2.extras
@@ -21,7 +24,10 @@ def get_connection():
         if database_url.startswith('postgres://'):
             database_url = database_url.replace('postgres://', 'postgresql://', 1)
         
-        conn = psycopg2.connect(database_url)
+        conn = psycopg2.connect(
+            database_url,
+            cursor_factory=psycopg2.extras.RealDictCursor
+        )
         conn.autocommit = False
         return conn
     else:
