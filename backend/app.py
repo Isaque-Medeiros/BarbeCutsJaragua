@@ -475,6 +475,8 @@ def admin_listar_agendamentos():
     elif periodo == 'personalizado' and data_inicio and data_fim:
         where = 'WHERE a.data_hora_inicio >= %s AND a.data_hora_inicio <= %s'
         query_params.extend([data_inicio + 'T00:00:00', data_fim + 'T23:59:59'])
+    elif periodo == 'todos':
+        where = ''
     else:
         where = ''
 
@@ -492,17 +494,6 @@ def admin_listar_agendamentos():
 
     # Log para debug
     print(f'[DEBUG] admin_listar_agendamentos: periodo={periodo}, encontrados={len(agendamentos)}')
-    if len(agendamentos) == 0:
-        # Tentar buscar todos os agendamentos sem filtro para debug
-        conn2 = get_connection()
-        c2 = conn2.cursor()
-        c2.execute('SELECT COUNT(*) as total FROM agendamentos')
-        total = dict(c2.fetchone())
-        c2.execute('SELECT id, hash_id, cliente_nome, data_hora_inicio FROM agendamentos ORDER BY data_hora_inicio DESC LIMIT 5')
-        ultimos = [dict(r) for r in c2.fetchall()]
-        conn2.close()
-        print(f'[DEBUG] Total de agendamentos no banco: {total}')
-        print(f'[DEBUG] Últimos 5 agendamentos: {ultimos}')
 
     return jsonify_com_datas({'agendamentos': agendamentos})
 
@@ -541,6 +532,8 @@ def admin_financeiro():
     elif periodo == 'personalizado' and data_inicio and data_fim:
         where = 'WHERE a.data_hora_inicio >= %s AND a.data_hora_inicio <= %s'
         query_params.extend([data_inicio + 'T00:00:00', data_fim + 'T23:59:59'])
+    elif periodo == 'todos':
+        where = ''
     else:
         where = ''
 

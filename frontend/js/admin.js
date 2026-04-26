@@ -68,7 +68,7 @@ function filtrarPeriodo(periodo) {
     periodoAtual = periodo;
 
     // Atualizar botões
-    ['hoje', 'semana', 'mes'].forEach(p => {
+    ['hoje', 'semana', 'mes', 'todos'].forEach(p => {
         const btn = document.getElementById(`filtro-${p}`);
         if (btn) {
             btn.className = p === periodo ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
@@ -170,6 +170,10 @@ async function carregarAgendamentos() {
                         <button class="btn btn-sm btn-secondary" onclick="abrirEditarAgendamento('${ag.id}', '${ag.status}', ${ag.valor_pago || 0})">
                             ✏️
                         </button>
+                        ${ag.status !== 'concluido' ? `
+                        <button class="btn btn-sm btn-success" onclick="concluirAgendamento('${ag.id}')">
+                            ✅
+                        </button>` : ''}
                         <button class="btn btn-sm btn-danger" onclick="cancelarAgendamento('${ag.id}')">
                             🗑️
                         </button>
@@ -206,6 +210,19 @@ async function salvarEdicaoAgendamento(event) {
         await adminAtualizarAgendamento(id, { status, valorPago: valor });
         mostrarToast('✅ Agendamento atualizado!', 'success');
         fecharModal('modal-editar-agendamento');
+        carregarAgendamentos();
+        carregarStats();
+    } catch (err) {
+        mostrarToast(err.message, 'error');
+    }
+}
+
+async function concluirAgendamento(id) {
+    if (!confirm('Confirmar que este cliente foi atendido?')) return;
+
+    try {
+        await adminAtualizarAgendamento(id, { status: 'concluido' });
+        mostrarToast('✅ Cliente atendido com sucesso!', 'success');
         carregarAgendamentos();
         carregarStats();
     } catch (err) {
