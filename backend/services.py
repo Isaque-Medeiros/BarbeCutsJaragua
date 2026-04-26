@@ -36,22 +36,29 @@ def minutes_to_time(minutes: int) -> str:
     return f'{h:02d}:{m:02d}'
 
 
-def formatar_data_br(data_str: str) -> str:
-    """Converte ISO date para DD/MM."""
+def formatar_data_br(data_str) -> str:
+    """Converte ISO date para DD/MM. Aceita string ISO ou objeto datetime."""
     try:
-        d = datetime.fromisoformat(data_str)
+        if isinstance(data_str, datetime):
+            d = data_str
+        else:
+            d = datetime.fromisoformat(str(data_str))
         return d.strftime('%d/%m')
     except:
-        return data_str
+        return str(data_str)
 
 
-def formatar_hora_br(data_str: str) -> str:
-    """Extrai HH:MM de uma string ISO datetime."""
+def formatar_hora_br(data_str) -> str:
+    """Extrai HH:MM de uma string ISO datetime. Aceita string ISO ou objeto datetime."""
     try:
-        d = datetime.fromisoformat(data_str)
+        if isinstance(data_str, datetime):
+            d = data_str
+        else:
+            d = datetime.fromisoformat(str(data_str))
         return d.strftime('%H:%M')
     except:
-        return data_str
+        return str(data_str)
+
 
 
 def calcular_slots_disponiveis(

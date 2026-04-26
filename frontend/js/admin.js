@@ -155,13 +155,13 @@ async function carregarAgendamentos() {
             <tbody>`;
 
         data.agendamentos.forEach(ag => {
-            const hora = formatarHora(ag.data_hora_inicio);
+            const dataHora = `${formatarDataBR(ag.data_hora_inicio)} ${formatarHora(ag.data_hora_inicio)}`;
             const statusClass = getStatusBadge(ag.status);
             const statusLabel = getStatusLabel(ag.status);
 
             html += `
                 <tr>
-                    <td><strong>${hora}</strong></td>
+                    <td><strong>${dataHora}</strong></td>
                     <td>${ag.cliente_nome}</td>
                     <td>${ag.servico_nome}</td>
                     <td>${formatarMoeda(ag.valor_original)}</td>

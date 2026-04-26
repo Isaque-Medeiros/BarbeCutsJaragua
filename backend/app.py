@@ -26,6 +26,44 @@ app = Flask(__name__, static_folder=None)
 CORS(app)
 _db_initialized = False
 
+
+# ===================== CONVERSOR DE DATAS PARA JSON =====================
+
+class CustomJSONEncoder(json.JSONEncoder):
+    """Encoder JSON que converte datetime e date para string ISO."""
+    def default(self, obj):
+        if isinstance(obj, (datetime, date)):
+            return obj.isoformat()
+        return super().default(obj)
+
+app.json_encoder = CustomJSONEncoder
+
+
+# ===================== TRATAMENTO DE ERROS GLOBAL =====================
+
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """Captura qualquer exceção não tratada e retorna JSON."""
+    import traceback
+    print(f'[ERRO] {traceback.format_exc()}')
+    return jsonify({'erro': f'Erro interno do servidor: {str(e)}'}), 500
+
+
+@app.errorhandler(500)
+def handle_500(e):
+    """Garante que erro 500 retorne JSON."""
+    return jsonify({'erro': 'Erro interno do servidor.'}), 500
+
+
+@app.errorhandler(404)
+def handle_404(e):
+    """Garante que erro 404 em APIs retorne JSON."""
+    if request.path.startswith('/api/'):
+        return jsonify({'erro': 'Endpoint não encontrado.'}), 404
+    return e
+
+
 # Configurações
 ADMIN_SECRET = os.environ.get('ADMIN_SECRET', 'admbarber1904')
 SITE_URL = os.environ.get('SITE_URL', 'http://localhost:5000')
@@ -142,12 +180,20 @@ def buscar_horarios():
         })
 
     # Buscar agendamentos existentes para a data
+    # Usar formato ISO com T para compatibilidade PostgreSQL
     data_inicio = f"{data_str}T00:00:00"
     data_fim = f"{data_str}T23:59:59"
-    cursor.execute(
-        'SELECT * FROM agendamentos WHERE data_hora_inicio >= %s AND data_hora_inicio <= %s',
-        (data_inicio, data_fim)
-    )
+    
+    if is_postgres():
+        cursor.execute(
+            'SELECT * FROM agendamentos WHERE data_hora_inicio >= %s::timestamp AND data_hora_inicio <= %s::timestamp',
+            (data_inicio, data_fim)
+        )
+    else:
+        cursor.execute(
+            'SELECT * FROM agendamentos WHERE data_hora_inicio >= ? AND data_hora_inicio <= ?',
+            (data_inicio, data_fim)
+        )
     agendamentos = [dict(row) for row in cursor.fetchall()]
 
     # Buscar bloqueios para a data
@@ -178,6 +224,7 @@ def buscar_horarios():
         },
         'slotsDisponiveis': slots
     })
+
 
 
 @app.route('/api/agendamentos', methods=['POST'])
@@ -229,17 +276,25 @@ def criar_agendamento():
     data_hora_fim = dt_fim.isoformat()
 
     # Buscar agendamentos conflitantes
-    cursor.execute('''
-        SELECT * FROM agendamentos
-        WHERE data_hora_inicio < %s AND data_hora_fim > %s
-        AND status != 'cancelado'
-    ''', (data_hora_fim, data_hora_inicio))
+    if is_postgres():
+        cursor.execute('''
+            SELECT * FROM agendamentos
+            WHERE data_hora_inicio < %s::timestamp AND data_hora_fim > %s::timestamp
+            AND status != 'cancelado'
+        ''', (data_hora_fim, data_hora_inicio))
+    else:
+        cursor.execute('''
+            SELECT * FROM agendamentos
+            WHERE data_hora_inicio < ? AND data_hora_fim > ?
+            AND status != 'cancelado'
+        ''', (data_hora_fim, data_hora_inicio))
     conflitantes = [dict(row) for row in cursor.fetchall()]
 
     # Buscar bloqueios para a data
     data_str = dt_inicio.strftime('%Y-%m-%d')
     cursor.execute('SELECT * FROM bloqueios WHERE data = %s', (data_str,))
     bloqueios = [dict(row) for row in cursor.fetchall()]
+
 
     # Validar agendamento
     validacao = validar_agendamento(

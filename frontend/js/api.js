@@ -155,7 +155,17 @@ function formatarDataBR(dataISO) {
     // Extrair apenas a parte da data (YYYY-MM-DD)
     const parteData = dataISO.split('T')[0];
     const partes = parteData.split('-');
-    if (partes.length < 2) return dataISO;
+    if (partes.length < 3) return dataISO;
+    // Formato brasileiro: DD/MM/AAAA
+    return `${partes[2]}/${partes[1]}/${partes[0]}`;
+}
+
+function formatarDataBRCurta(dataISO) {
+    // Apenas DD/MM (para exibição compacta)
+    if (!dataISO) return '—';
+    const parteData = dataISO.split('T')[0];
+    const partes = parteData.split('-');
+    if (partes.length < 3) return dataISO;
     return `${partes[2]}/${partes[1]}`;
 }
 
@@ -167,6 +177,7 @@ function formatarHora(dataISO) {
     if (!parteHora) return dataISO;
     return parteHora.substring(0, 5);
 }
+
 
 function getDiaSemanaNome(dia) {
     const dias = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];

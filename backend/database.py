@@ -33,12 +33,57 @@ def get_connection():
     else:
         # SQLite (desenvolvimento local)
         import sqlite3
+        import re
         DB_PATH = os.path.join(os.path.dirname(__file__), 'barbearia.db')
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL;")
         conn.execute("PRAGMA foreign_keys=ON;")
+        
+        # Adaptar o cursor do SQLite para aceitar %s como placeholder (igual PostgreSQL)
+        original_execute = conn.cursor().execute
+        original_executemany = conn.cursor().executemany
+        
+        class CursorAdapter:
+            def __init__(self, cursor):
+                self.cursor = cursor
+                self.rowcount = 0
+                self.lastrowid = None
+                self.description = None
+            
+            def execute(self, query, params=None):
+                # Converter %s para ? no SQLite
+                if params is not None:
+                    adapted_query = re.sub(r'%s', '?', query)
+                    # Também converter ::timestamp para string simples
+                    adapted_query = re.sub(r'::\w+', '', adapted_query)
+                    self.cursor.execute(adapted_query, params)
+                else:
+                    self.cursor.execute(query)
+                self.rowcount = self.cursor.rowcount
+                self.lastrowid = self.cursor.lastrowid
+                self.description = self.cursor.description
+                return self
+            
+            def executemany(self, query, params_list):
+                adapted_query = re.sub(r'%s', '?', query)
+                adapted_query = re.sub(r'::\w+', '', adapted_query)
+                self.cursor.executemany(adapted_query, params_list)
+                self.rowcount = self.cursor.rowcount
+                return self
+            
+            def fetchone(self):
+                return self.cursor.fetchone()
+            
+            def fetchall(self):
+                return self.cursor.fetchall()
+        
+        # Sobrescrever o método cursor para retornar o adaptador
+        original_cursor_method = conn.cursor
+        conn.cursor = lambda: CursorAdapter(original_cursor_method())
+        
         return conn
+
 
 
 def is_postgres():
