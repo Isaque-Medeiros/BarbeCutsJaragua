@@ -258,6 +258,9 @@ async function carregarServicos() {
                     <td>${formatarMoeda(s.valor)}</td>
                     <td>${s.ativo ? '✅ Ativo' : '❌ Inativo'}</td>
                     <td>
+                        <button class="btn btn-sm btn-secondary" onclick="abrirEditarServico(${s.id}, '${s.nome.replace(/'/g, "\\'")}', '${s.descricao ? s.descricao.replace(/'/g, "\\'") : ''}', ${s.duracao_minutos}, ${s.valor}, ${s.ativo ? 1 : 0})">
+                            ✏️ Editar
+                        </button>
                         ${s.ativo ? `<button class="btn btn-sm btn-danger" onclick="desativarServico(${s.id})">Desativar</button>` : ''}
                     </td>
                 </tr>
@@ -307,6 +310,41 @@ async function desativarServico(id) {
     try {
         await adminDesativarServico(id);
         mostrarToast('✅ Serviço desativado!', 'success');
+        carregarServicos();
+    } catch (err) {
+        mostrarToast(err.message, 'error');
+    }
+}
+
+function abrirEditarServico(id, nome, descricao, duracao, valor, ativo) {
+    document.getElementById('edit-servico-id').value = id;
+    document.getElementById('edit-servico-nome').value = nome;
+    document.getElementById('edit-servico-desc').value = descricao || '';
+    document.getElementById('edit-servico-duracao').value = duracao;
+    document.getElementById('edit-servico-valor').value = valor;
+    document.getElementById('edit-servico-ativo').value = ativo;
+    abrirModal('modal-editar-servico');
+}
+
+async function atualizarServico(event) {
+    event.preventDefault();
+
+    const id = document.getElementById('edit-servico-id').value;
+    const nome = document.getElementById('edit-servico-nome').value.trim();
+    const descricao = document.getElementById('edit-servico-desc').value.trim();
+    const duracao = parseInt(document.getElementById('edit-servico-duracao').value);
+    const valor = parseFloat(document.getElementById('edit-servico-valor').value);
+    const ativo = parseInt(document.getElementById('edit-servico-ativo').value);
+
+    if (!nome || !duracao || !valor) {
+        mostrarToast('Preencha todos os campos obrigatórios.', 'error');
+        return;
+    }
+
+    try {
+        await adminAtualizarServico(id, { nome, descricao, duracaoMinutos: duracao, valor, ativo: ativo === 1 });
+        mostrarToast('✅ Serviço atualizado!', 'success');
+        fecharModal('modal-editar-servico');
         carregarServicos();
     } catch (err) {
         mostrarToast(err.message, 'error');

@@ -392,18 +392,23 @@ def admin_listar_agendamentos():
     cursor = conn.cursor()
 
     hoje = date.today().isoformat()
+    query_params = []
 
     if periodo == 'hoje':
-        where = f"WHERE date(a.data_hora_inicio) = '{hoje}'"
+        where = "WHERE date(a.data_hora_inicio) = %s"
+        query_params.append(hoje)
     elif periodo == 'semana':
         inicio_semana = (date.today() - timedelta(days=date.today().weekday())).isoformat()
         fim_semana = (date.today() + timedelta(days=6 - date.today().weekday())).isoformat()
-        where = f"WHERE date(a.data_hora_inicio) >= '{inicio_semana}' AND date(a.data_hora_inicio) <= '{fim_semana}'"
+        where = "WHERE date(a.data_hora_inicio) >= %s AND date(a.data_hora_inicio) <= %s"
+        query_params.extend([inicio_semana, fim_semana])
     elif periodo == 'mes':
         inicio_mes = date.today().replace(day=1).isoformat()
-        where = f"WHERE date(a.data_hora_inicio) >= '{inicio_mes}'"
+        where = "WHERE date(a.data_hora_inicio) >= %s"
+        query_params.append(inicio_mes)
     elif periodo == 'personalizado' and data_inicio and data_fim:
-        where = f"WHERE date(a.data_hora_inicio) >= '{data_inicio}' AND date(a.data_hora_inicio) <= '{data_fim}'"
+        where = "WHERE date(a.data_hora_inicio) >= %s AND date(a.data_hora_inicio) <= %s"
+        query_params.extend([data_inicio, data_fim])
     else:
         where = ''
 
@@ -415,7 +420,7 @@ def admin_listar_agendamentos():
         ORDER BY a.data_hora_inicio ASC
     '''
 
-    cursor.execute(query)
+    cursor.execute(query, query_params)
     agendamentos = [dict(row) for row in cursor.fetchall()]
     conn.close()
 
@@ -436,22 +441,27 @@ def admin_financeiro():
     cursor = conn.cursor()
 
     hoje = date.today().isoformat()
+    query_params = []
 
     if periodo == 'hoje':
-        where = f"WHERE date(a.data_hora_inicio) = '{hoje}'"
+        where = "WHERE date(a.data_hora_inicio) = %s"
+        query_params.append(hoje)
     elif periodo == 'semana':
         inicio_semana = (date.today() - timedelta(days=date.today().weekday())).isoformat()
         fim_semana = (date.today() + timedelta(days=6 - date.today().weekday())).isoformat()
-        where = f"WHERE date(a.data_hora_inicio) >= '{inicio_semana}' AND date(a.data_hora_inicio) <= '{fim_semana}'"
+        where = "WHERE date(a.data_hora_inicio) >= %s AND date(a.data_hora_inicio) <= %s"
+        query_params.extend([inicio_semana, fim_semana])
     elif periodo == 'mes':
         inicio_mes = date.today().replace(day=1).isoformat()
-        where = f"WHERE date(a.data_hora_inicio) >= '{inicio_mes}'"
+        where = "WHERE date(a.data_hora_inicio) >= %s"
+        query_params.append(inicio_mes)
     elif periodo == 'personalizado' and data_inicio and data_fim:
-        where = f"WHERE date(a.data_hora_inicio) >= '{data_inicio}' AND date(a.data_hora_inicio) <= '{data_fim}'"
+        where = "WHERE date(a.data_hora_inicio) >= %s AND date(a.data_hora_inicio) <= %s"
+        query_params.extend([data_inicio, data_fim])
     else:
         where = ''
 
-    cursor.execute(f'SELECT a.*, s.nome as servico_nome FROM agendamentos a JOIN servicos s ON a.servico_id = s.id {where}')
+    cursor.execute(f'SELECT a.*, s.nome as servico_nome FROM agendamentos a JOIN servicos s ON a.servico_id = s.id {where}', query_params)
     agendamentos = [dict(row) for row in cursor.fetchall()]
     conn.close()
 
@@ -495,10 +505,9 @@ def admin_atualizar_agendamento(ag_id):
     params.append(datetime.now().isoformat())
     params.append(ag_id)
 
-    cursor.execute(
-        f'UPDATE agendamentos SET {", ".join(updates)} WHERE id = %s',
-        params
-    )
+    # Construir query com placeholders seguros
+    query = 'UPDATE agendamentos SET ' + ', '.join(updates) + ' WHERE id = %s'
+    cursor.execute(query, params)
 
     if cursor.rowcount == 0:
         conn.close()
@@ -619,10 +628,9 @@ def admin_atualizar_servico(servico_id):
         return jsonify({'erro': 'Nenhum campo para atualizar.'}), 400
 
     params.append(servico_id)
-    cursor.execute(
-        f'UPDATE servicos SET {", ".join(updates)} WHERE id = %s',
-        params
-    )
+    # Construir query com placeholders seguros
+    query = 'UPDATE servicos SET ' + ', '.join(updates) + ' WHERE id = %s'
+    cursor.execute(query, params)
 
     if cursor.rowcount == 0:
         conn.close()
