@@ -150,7 +150,9 @@ function formatarDataISO(data) {
 }
 
 function formatarDataBR(dataISO) {
-    const [ano, mes, dia] = dataISO.split('-');
+    // Extrair apenas a parte da data (YYYY-MM-DD) de um ISO datetime
+    const apenasData = dataISO.split('T')[0];
+    const [ano, mes, dia] = apenasData.split('-');
     return `${dia}/${mes}`;
 }
 

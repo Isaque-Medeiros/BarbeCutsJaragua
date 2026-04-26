@@ -144,6 +144,7 @@ async function carregarAgendamentos() {
         let html = `<table>
             <thead>
                 <tr>
+                    <th>Data</th>
                     <th>Horário</th>
                     <th>Cliente</th>
                     <th>Serviço</th>
@@ -155,12 +156,14 @@ async function carregarAgendamentos() {
             <tbody>`;
 
         data.agendamentos.forEach(ag => {
+            const dataBr = formatarDataBR(ag.data_hora_inicio);
             const hora = formatarHora(ag.data_hora_inicio);
             const statusClass = getStatusBadge(ag.status);
             const statusLabel = getStatusLabel(ag.status);
 
             html += `
                 <tr>
+                    <td>${dataBr}</td>
                     <td><strong>${hora}</strong></td>
                     <td>${ag.cliente_nome}</td>
                     <td>${ag.servico_nome}</td>
