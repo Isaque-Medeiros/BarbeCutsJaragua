@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 # Carregar variáveis de ambiente do arquivo .env
 load_dotenv()
 
-from database import get_connection, init_db, seed_default_data
+from database import get_connection, init_db, seed_default_data, is_postgres
 from services import (
     gerar_hash_id, gerar_id, calcular_slots_disponiveis,
     validar_agendamento, calcular_resumo_financeiro,
@@ -394,20 +394,23 @@ def admin_listar_agendamentos():
     hoje = date.today().isoformat()
     query_params = []
 
+    # Usar ::date no PostgreSQL, date() no SQLite
+    date_func = 'a.data_hora_inicio::date' if is_postgres() else 'date(a.data_hora_inicio)'
+
     if periodo == 'hoje':
-        where = "WHERE date(a.data_hora_inicio) = %s"
+        where = f"WHERE {date_func} = %s"
         query_params.append(hoje)
     elif periodo == 'semana':
         inicio_semana = (date.today() - timedelta(days=date.today().weekday())).isoformat()
         fim_semana = (date.today() + timedelta(days=6 - date.today().weekday())).isoformat()
-        where = "WHERE date(a.data_hora_inicio) >= %s AND date(a.data_hora_inicio) <= %s"
+        where = f"WHERE {date_func} >= %s AND {date_func} <= %s"
         query_params.extend([inicio_semana, fim_semana])
     elif periodo == 'mes':
         inicio_mes = date.today().replace(day=1).isoformat()
-        where = "WHERE date(a.data_hora_inicio) >= %s"
+        where = f"WHERE {date_func} >= %s"
         query_params.append(inicio_mes)
     elif periodo == 'personalizado' and data_inicio and data_fim:
-        where = "WHERE date(a.data_hora_inicio) >= %s AND date(a.data_hora_inicio) <= %s"
+        where = f"WHERE {date_func} >= %s AND {date_func} <= %s"
         query_params.extend([data_inicio, data_fim])
     else:
         where = ''
@@ -443,20 +446,23 @@ def admin_financeiro():
     hoje = date.today().isoformat()
     query_params = []
 
+    # Usar ::date no PostgreSQL, date() no SQLite
+    date_func = 'a.data_hora_inicio::date' if is_postgres() else 'date(a.data_hora_inicio)'
+
     if periodo == 'hoje':
-        where = "WHERE date(a.data_hora_inicio) = %s"
+        where = f"WHERE {date_func} = %s"
         query_params.append(hoje)
     elif periodo == 'semana':
         inicio_semana = (date.today() - timedelta(days=date.today().weekday())).isoformat()
         fim_semana = (date.today() + timedelta(days=6 - date.today().weekday())).isoformat()
-        where = "WHERE date(a.data_hora_inicio) >= %s AND date(a.data_hora_inicio) <= %s"
+        where = f"WHERE {date_func} >= %s AND {date_func} <= %s"
         query_params.extend([inicio_semana, fim_semana])
     elif periodo == 'mes':
         inicio_mes = date.today().replace(day=1).isoformat()
-        where = "WHERE date(a.data_hora_inicio) >= %s"
+        where = f"WHERE {date_func} >= %s"
         query_params.append(inicio_mes)
     elif periodo == 'personalizado' and data_inicio and data_fim:
-        where = "WHERE date(a.data_hora_inicio) >= %s AND date(a.data_hora_inicio) <= %s"
+        where = f"WHERE {date_func} >= %s AND {date_func} <= %s"
         query_params.extend([data_inicio, data_fim])
     else:
         where = ''
@@ -585,7 +591,14 @@ def admin_criar_servico():
         (nome, descricao, duracao, valor)
     )
     conn.commit()
-    servico_id = cursor.lastrowid
+
+    # Obter o ID do serviço recém-criado (compatível com SQLite e PostgreSQL)
+    if is_postgres():
+        cursor.execute('SELECT LASTVAL()')
+        servico_id = cursor.fetchone()['lastval']
+    else:
+        servico_id = cursor.lastrowid
+
     conn.close()
 
     return jsonify({'success': True, 'servico': {'id': servico_id, 'nome': nome}}), 201

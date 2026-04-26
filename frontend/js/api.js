@@ -150,12 +150,22 @@ function formatarDataISO(data) {
 }
 
 function formatarDataBR(dataISO) {
-    const [ano, mes, dia] = dataISO.split('-');
-    return `${dia}/${mes}`;
+    // dataISO pode vir como "2026-04-26" ou "2026-04-26T14:00:00"
+    if (!dataISO) return '—';
+    // Extrair apenas a parte da data (YYYY-MM-DD)
+    const parteData = dataISO.split('T')[0];
+    const partes = parteData.split('-');
+    if (partes.length < 2) return dataISO;
+    return `${partes[2]}/${partes[1]}`;
 }
 
 function formatarHora(dataISO) {
-    return dataISO.substring(11, 16);
+    // dataISO pode vir como "2026-04-26T14:00:00" ou "2026-04-26T14:50:00"
+    if (!dataISO) return '—';
+    // Extrair apenas a parte da hora (HH:MM)
+    const parteHora = dataISO.split('T')[1];
+    if (!parteHora) return dataISO;
+    return parteHora.substring(0, 5);
 }
 
 function getDiaSemanaNome(dia) {

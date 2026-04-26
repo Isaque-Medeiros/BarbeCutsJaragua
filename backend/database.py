@@ -41,6 +41,12 @@ def get_connection():
         return conn
 
 
+def is_postgres():
+    """Verifica se está usando PostgreSQL."""
+    database_url = os.environ.get('DATABASE_URL', '')
+    return database_url.startswith('postgres://') or database_url.startswith('postgresql://')
+
+
 def init_db():
     """Cria as tabelas do banco de dados se não existirem."""
     conn = get_connection()
@@ -134,10 +140,19 @@ def seed_default_data():
             ('Degradê', 'Corte degradê americano ou social', 40, 45.00),
             ('Hidratação Capilar', 'Hidratação completa dos fios', 30, 30.00),
         ]
-        cursor.executemany(
-            'INSERT INTO servicos (nome, descricao, duracao_minutos, valor) VALUES (%s, %s, %s, %s)',
-            servicos
-        )
+        if is_postgres():
+            # PostgreSQL: usar loop com execute (executemany tem sintaxe diferente)
+            for s in servicos:
+                cursor.execute(
+                    'INSERT INTO servicos (nome, descricao, duracao_minutos, valor) VALUES (%s, %s, %s, %s)',
+                    s
+                )
+        else:
+            # SQLite
+            cursor.executemany(
+                'INSERT INTO servicos (nome, descricao, duracao_minutos, valor) VALUES (?, ?, ?, ?)',
+                servicos
+            )
 
     # Horários padrão (seg-sex 08:00-19:00, sáb 08:00-17:00)
     cursor.execute('SELECT COUNT(*) AS total FROM configuracao_horarios')
@@ -151,10 +166,19 @@ def seed_default_data():
             (5, '08:00', '19:00', 1, 30),  # Sexta
             (6, '08:00', '17:00', 1, 30),  # Sábado
         ]
-        cursor.executemany(
-            'INSERT INTO configuracao_horarios (dia_semana, abertura, fechamento, ativo, intervalo_corte_minutos) VALUES (%s, %s, %s, %s, %s)',
-            horarios
-        )
+        if is_postgres():
+            # PostgreSQL: usar loop com execute
+            for h in horarios:
+                cursor.execute(
+                    'INSERT INTO configuracao_horarios (dia_semana, abertura, fechamento, ativo, intervalo_corte_minutos) VALUES (%s, %s, %s, %s, %s)',
+                    h
+                )
+        else:
+            # SQLite
+            cursor.executemany(
+                'INSERT INTO configuracao_horarios (dia_semana, abertura, fechamento, ativo, intervalo_corte_minutos) VALUES (?, ?, ?, ?, ?)',
+                horarios
+            )
 
     conn.commit()
     conn.close()
