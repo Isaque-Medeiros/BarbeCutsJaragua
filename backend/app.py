@@ -89,12 +89,6 @@ def index():
     return send_from_directory(FRONTEND_PATH, 'index.html')
 
 
-@app.route('/health', methods=['GET'])
-def health():
-    """Health check simples para o Render."""
-    return jsonify({'status': 'ok'}), 200
-
-
 @app.route('/admin')
 def admin_page():
     return send_from_directory(FRONTEND_PATH, 'admin.html')
@@ -135,7 +129,7 @@ def listar_servicos():
     cursor.execute('SELECT * FROM servicos WHERE ativo = 1 ORDER BY nome')
     servicos = [dict(row) for row in cursor.fetchall()]
     conn.close()
-    return jsonify({'servicos': servicos})
+    return jsonify_com_datas({'servicos': servicos})
 
 
 @app.route('/api/horarios', methods=['GET'])
@@ -188,10 +182,8 @@ def buscar_horarios():
         })
 
     # Buscar agendamentos existentes para a data
-    # Usar formato ISO com T para compatibilidade PostgreSQL
     data_inicio = f"{data_str}T00:00:00"
     data_fim = f"{data_str}T23:59:59"
-    
     cursor.execute(
         'SELECT * FROM agendamentos WHERE data_hora_inicio >= %s AND data_hora_inicio <= %s',
         (data_inicio, data_fim)
@@ -215,7 +207,7 @@ def buscar_horarios():
         bloqueios=bloqueios
     )
 
-    return jsonify_com_datas({
+    return jsonify({
         'data': data_str,
         'diaSemana': dia_semana,
         'servico': servico,
@@ -226,7 +218,6 @@ def buscar_horarios():
         },
         'slotsDisponiveis': slots
     })
-
 
 
 @app.route('/api/agendamentos', methods=['POST'])
@@ -289,7 +280,6 @@ def criar_agendamento():
     data_str = dt_inicio.strftime('%Y-%m-%d')
     cursor.execute('SELECT * FROM bloqueios WHERE data = %s', (data_str,))
     bloqueios = [dict(row) for row in cursor.fetchall()]
-
 
     # Validar agendamento
     validacao = validar_agendamento(
@@ -388,7 +378,7 @@ def consultar_agendamento():
         return jsonify({'erro': 'Agendamento não encontrado.'}), 404
 
     ag = dict(agendamento)
-    return jsonify_com_datas({
+    return jsonify({
         'agendamento': {
             'hashId': ag['hash_id'],
             'clienteNome': ag['cliente_nome'],
@@ -441,31 +431,27 @@ def admin_listar_agendamentos():
     conn = get_connection()
     cursor = conn.cursor()
 
-    hoje = date.today()
-    query_params = []
+    hoje = date.today().isoformat()
 
     if periodo == 'hoje':
-        # Usar intervalo de timestamp (mais compatível com PostgreSQL)
-        data_inicio_str = hoje.isoformat() + 'T00:00:00'
-        data_fim_str = hoje.isoformat() + 'T23:59:59'
-        where = 'WHERE a.data_hora_inicio >= %s AND a.data_hora_inicio <= %s'
-        query_params.extend([data_inicio_str, data_fim_str])
+        where = "WHERE a.data_hora_inicio >= %s AND a.data_hora_inicio <= %s"
+        params = [f"{hoje}T00:00:00", f"{hoje}T23:59:59"]
     elif periodo == 'semana':
-        inicio_semana = (hoje - timedelta(days=hoje.weekday())).isoformat() + 'T00:00:00'
-        fim_semana = (hoje + timedelta(days=6 - hoje.weekday())).isoformat() + 'T23:59:59'
-        where = 'WHERE a.data_hora_inicio >= %s AND a.data_hora_inicio <= %s'
-        query_params.extend([inicio_semana, fim_semana])
+        inicio_semana = (date.today() - timedelta(days=date.today().weekday())).isoformat()
+        fim_semana = (date.today() + timedelta(days=6 - date.today().weekday())).isoformat()
+        where = "WHERE a.data_hora_inicio >= %s AND a.data_hora_inicio <= %s"
+        params = [f"{inicio_semana}T00:00:00", f"{fim_semana}T23:59:59"]
     elif periodo == 'mes':
-        inicio_mes = hoje.replace(day=1).isoformat() + 'T00:00:00'
-        where = 'WHERE a.data_hora_inicio >= %s'
-        query_params.append(inicio_mes)
+        inicio_mes = date.today().replace(day=1).isoformat()
+        where = "WHERE a.data_hora_inicio >= %s"
+        params = [f"{inicio_mes}T00:00:00"]
     elif periodo == 'personalizado' and data_inicio and data_fim:
-        where = 'WHERE a.data_hora_inicio >= %s AND a.data_hora_inicio <= %s'
-        query_params.extend([data_inicio + 'T00:00:00', data_fim + 'T23:59:59'])
-    elif periodo == 'todos':
-        where = ''
+        where = "WHERE a.data_hora_inicio >= %s AND a.data_hora_inicio <= %s"
+        params = [f"{data_inicio}T00:00:00", f"{data_fim}T23:59:59"]
     else:
-        where = ''
+        # 'todos' ou qualquer outro valor - sem filtro de data
+        where = ""
+        params = []
 
     query = f'''
         SELECT a.*, s.nome as servico_nome, s.duracao_minutos
@@ -475,15 +461,11 @@ def admin_listar_agendamentos():
         ORDER BY a.data_hora_inicio ASC
     '''
 
-    cursor.execute(query, query_params)
+    cursor.execute(query, params)
     agendamentos = [dict(row) for row in cursor.fetchall()]
     conn.close()
 
-    # Log para debug
-    print(f'[DEBUG] admin_listar_agendamentos: periodo={periodo}, encontrados={len(agendamentos)}')
-
     return jsonify_com_datas({'agendamentos': agendamentos})
-
 
 
 @app.route('/api/admin/financeiro', methods=['GET'])
@@ -499,32 +481,31 @@ def admin_financeiro():
     conn = get_connection()
     cursor = conn.cursor()
 
-    hoje = date.today()
-    query_params = []
+    hoje = date.today().isoformat()
 
     if periodo == 'hoje':
-        data_inicio_str = hoje.isoformat() + 'T00:00:00'
-        data_fim_str = hoje.isoformat() + 'T23:59:59'
-        where = 'WHERE a.data_hora_inicio >= %s AND a.data_hora_inicio <= %s'
-        query_params.extend([data_inicio_str, data_fim_str])
+        where = "WHERE a.data_hora_inicio >= %s AND a.data_hora_inicio <= %s"
+        params = [f"{hoje}T00:00:00", f"{hoje}T23:59:59"]
     elif periodo == 'semana':
-        inicio_semana = (hoje - timedelta(days=hoje.weekday())).isoformat() + 'T00:00:00'
-        fim_semana = (hoje + timedelta(days=6 - hoje.weekday())).isoformat() + 'T23:59:59'
-        where = 'WHERE a.data_hora_inicio >= %s AND a.data_hora_inicio <= %s'
-        query_params.extend([inicio_semana, fim_semana])
+        inicio_semana = (date.today() - timedelta(days=date.today().weekday())).isoformat()
+        fim_semana = (date.today() + timedelta(days=6 - date.today().weekday())).isoformat()
+        where = "WHERE a.data_hora_inicio >= %s AND a.data_hora_inicio <= %s"
+        params = [f"{inicio_semana}T00:00:00", f"{fim_semana}T23:59:59"]
     elif periodo == 'mes':
-        inicio_mes = hoje.replace(day=1).isoformat() + 'T00:00:00'
-        where = 'WHERE a.data_hora_inicio >= %s'
-        query_params.append(inicio_mes)
+        inicio_mes = date.today().replace(day=1).isoformat()
+        where = "WHERE a.data_hora_inicio >= %s"
+        params = [f"{inicio_mes}T00:00:00"]
     elif periodo == 'personalizado' and data_inicio and data_fim:
-        where = 'WHERE a.data_hora_inicio >= %s AND a.data_hora_inicio <= %s'
-        query_params.extend([data_inicio + 'T00:00:00', data_fim + 'T23:59:59'])
-    elif periodo == 'todos':
-        where = ''
+        where = "WHERE a.data_hora_inicio >= %s AND a.data_hora_inicio <= %s"
+        params = [f"{data_inicio}T00:00:00", f"{data_fim}T23:59:59"]
     else:
-        where = ''
+        where = ""
+        params = []
 
-    cursor.execute(f'SELECT a.*, s.nome as servico_nome FROM agendamentos a JOIN servicos s ON a.servico_id = s.id {where}', query_params)
+    cursor.execute(
+        f'SELECT a.*, s.nome as servico_nome FROM agendamentos a JOIN servicos s ON a.servico_id = s.id {where}',
+        params
+    )
     agendamentos = [dict(row) for row in cursor.fetchall()]
     conn.close()
 
@@ -568,9 +549,10 @@ def admin_atualizar_agendamento(ag_id):
     params.append(datetime.now().isoformat())
     params.append(ag_id)
 
-    # Construir query com placeholders seguros
-    query = 'UPDATE agendamentos SET ' + ', '.join(updates) + ' WHERE id = %s'
-    cursor.execute(query, params)
+    cursor.execute(
+        f'UPDATE agendamentos SET {", ".join(updates)} WHERE id = %s',
+        params
+    )
 
     if cursor.rowcount == 0:
         conn.close()
@@ -649,10 +631,10 @@ def admin_criar_servico():
     )
     conn.commit()
 
-    # Obter o ID do serviço recém-criado (compatível com SQLite e PostgreSQL)
+    # Obter o ID do serviço inserido (compatível com PostgreSQL e SQLite)
     if is_postgres():
-        cursor.execute('SELECT LASTVAL()')
-        servico_id = cursor.fetchone()['lastval']
+        cursor.execute('SELECT LASTVAL() as id')
+        servico_id = cursor.fetchone()['id']
     else:
         servico_id = cursor.lastrowid
 
@@ -698,9 +680,10 @@ def admin_atualizar_servico(servico_id):
         return jsonify({'erro': 'Nenhum campo para atualizar.'}), 400
 
     params.append(servico_id)
-    # Construir query com placeholders seguros
-    query = 'UPDATE servicos SET ' + ', '.join(updates) + ' WHERE id = %s'
-    cursor.execute(query, params)
+    cursor.execute(
+        f'UPDATE servicos SET {", ".join(updates)} WHERE id = %s',
+        params
+    )
 
     if cursor.rowcount == 0:
         conn.close()
@@ -803,22 +786,12 @@ def admin_remover_bloqueio(bl_id):
 
 # ===================== INICIALIZAÇÃO =====================
 
-def initialize_database_once():
-    """Inicializa o banco uma única vez por processo."""
-    global _db_initialized
-    if _db_initialized:
-        return
-    print('[INFO] Inicializando banco de dados...')
-    init_db()
-    seed_default_data()
-    _db_initialized = True
-    print('[OK] Sistema BarbeCity Jaraguá iniciado!')
+# Inicializar banco ao importar (para gunicorn)
+print('[INFO] Inicializando banco de dados...')
+init_db()
+seed_default_data()
+print('[OK] Sistema BarbeCity Jaraguá iniciado!')
 
-
-# Inicializar banco ao importar (para gunicorn e Vercel)
-initialize_database_once()
-
-# Para execução local
 if __name__ == '__main__':
     import sys
     import io

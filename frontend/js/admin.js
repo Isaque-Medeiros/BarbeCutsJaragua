@@ -155,25 +155,24 @@ async function carregarAgendamentos() {
             <tbody>`;
 
         data.agendamentos.forEach(ag => {
-            const dataHora = `${formatarDataBR(ag.data_hora_inicio)} ${formatarHora(ag.data_hora_inicio)}`;
+            const hora = formatarHora(ag.data_hora_inicio);
             const statusClass = getStatusBadge(ag.status);
             const statusLabel = getStatusLabel(ag.status);
 
             html += `
                 <tr>
-                    <td><strong>${dataHora}</strong></td>
+                    <td><strong>${hora}</strong></td>
                     <td>${ag.cliente_nome}</td>
                     <td>${ag.servico_nome}</td>
                     <td>${formatarMoeda(ag.valor_original)}</td>
                     <td><span class="badge ${statusClass}">${statusLabel}</span></td>
                     <td>
+                        ${ag.status === 'agendado' ? `<button class="btn btn-sm btn-success" onclick="confirmarAtendimento('${ag.id}')" title="Confirmar atendimento">
+                            ✅
+                        </button>` : ''}
                         <button class="btn btn-sm btn-secondary" onclick="abrirEditarAgendamento('${ag.id}', '${ag.status}', ${ag.valor_pago || 0})">
                             ✏️
                         </button>
-                        ${ag.status !== 'concluido' ? `
-                        <button class="btn btn-sm btn-success" onclick="concluirAgendamento('${ag.id}')">
-                            ✅
-                        </button>` : ''}
                         <button class="btn btn-sm btn-danger" onclick="cancelarAgendamento('${ag.id}')">
                             🗑️
                         </button>
@@ -217,12 +216,12 @@ async function salvarEdicaoAgendamento(event) {
     }
 }
 
-async function concluirAgendamento(id) {
-    if (!confirm('Confirmar que este cliente foi atendido?')) return;
+async function confirmarAtendimento(id) {
+    if (!confirm('Confirmar que este atendimento foi realizado?')) return;
 
     try {
         await adminAtualizarAgendamento(id, { status: 'concluido' });
-        mostrarToast('✅ Cliente atendido com sucesso!', 'success');
+        mostrarToast('✅ Atendimento confirmado!', 'success');
         carregarAgendamentos();
         carregarStats();
     } catch (err) {
@@ -275,9 +274,6 @@ async function carregarServicos() {
                     <td>${formatarMoeda(s.valor)}</td>
                     <td>${s.ativo ? '✅ Ativo' : '❌ Inativo'}</td>
                     <td>
-                        <button class="btn btn-sm btn-secondary" onclick="abrirEditarServico(${s.id}, '${s.nome.replace(/'/g, "\\'")}', '${s.descricao ? s.descricao.replace(/'/g, "\\'") : ''}', ${s.duracao_minutos}, ${s.valor}, ${s.ativo ? 1 : 0})">
-                            ✏️ Editar
-                        </button>
                         ${s.ativo ? `<button class="btn btn-sm btn-danger" onclick="desativarServico(${s.id})">Desativar</button>` : ''}
                     </td>
                 </tr>
@@ -327,41 +323,6 @@ async function desativarServico(id) {
     try {
         await adminDesativarServico(id);
         mostrarToast('✅ Serviço desativado!', 'success');
-        carregarServicos();
-    } catch (err) {
-        mostrarToast(err.message, 'error');
-    }
-}
-
-function abrirEditarServico(id, nome, descricao, duracao, valor, ativo) {
-    document.getElementById('edit-servico-id').value = id;
-    document.getElementById('edit-servico-nome').value = nome;
-    document.getElementById('edit-servico-desc').value = descricao || '';
-    document.getElementById('edit-servico-duracao').value = duracao;
-    document.getElementById('edit-servico-valor').value = valor;
-    document.getElementById('edit-servico-ativo').value = ativo;
-    abrirModal('modal-editar-servico');
-}
-
-async function atualizarServico(event) {
-    event.preventDefault();
-
-    const id = document.getElementById('edit-servico-id').value;
-    const nome = document.getElementById('edit-servico-nome').value.trim();
-    const descricao = document.getElementById('edit-servico-desc').value.trim();
-    const duracao = parseInt(document.getElementById('edit-servico-duracao').value);
-    const valor = parseFloat(document.getElementById('edit-servico-valor').value);
-    const ativo = parseInt(document.getElementById('edit-servico-ativo').value);
-
-    if (!nome || !duracao || !valor) {
-        mostrarToast('Preencha todos os campos obrigatórios.', 'error');
-        return;
-    }
-
-    try {
-        await adminAtualizarServico(id, { nome, descricao, duracaoMinutos: duracao, valor, ativo: ativo === 1 });
-        mostrarToast('✅ Serviço atualizado!', 'success');
-        fecharModal('modal-editar-servico');
         carregarServicos();
     } catch (err) {
         mostrarToast(err.message, 'error');

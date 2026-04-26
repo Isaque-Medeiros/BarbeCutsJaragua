@@ -48,41 +48,44 @@ def get_connection():
                 self.cursor = cursor
                 self.rowcount = 0
                 self.lastrowid = None
-                self.description = None
-            
+
             def execute(self, query, params=None):
-                # Converter %s para ? no SQLite
+                # Converter %s para ? (SQLite usa ? como placeholder)
                 if params is not None:
-                    adapted_query = re.sub(r'%s', '?', query)
-                    # Também converter ::timestamp para string simples
-                    adapted_query = re.sub(r'::\w+', '', adapted_query)
-                    self.cursor.execute(adapted_query, params)
+                    sqlite_query = re.sub(r'%s', '?', query)
+                    self.cursor.execute(sqlite_query, params)
                 else:
                     self.cursor.execute(query)
                 self.rowcount = self.cursor.rowcount
                 self.lastrowid = self.cursor.lastrowid
-                self.description = self.cursor.description
                 return self
-            
+
             def executemany(self, query, params_list):
-                adapted_query = re.sub(r'%s', '?', query)
-                adapted_query = re.sub(r'::\w+', '', adapted_query)
-                self.cursor.executemany(adapted_query, params_list)
+                sqlite_query = re.sub(r'%s', '?', query)
+                self.cursor.executemany(sqlite_query, params_list)
                 self.rowcount = self.cursor.rowcount
                 return self
-            
+
             def fetchone(self):
                 return self.cursor.fetchone()
-            
+
             def fetchall(self):
                 return self.cursor.fetchall()
+
+            def close(self):
+                self.cursor.close()
+
+        # Retornar conexão com cursor adaptado
+        original_cursor = conn.cursor()
+        conn._adapted_cursor = CursorAdapter(original_cursor)
         
-        # Sobrescrever o método cursor para retornar o adaptador
+        # Monkey-patch para que conn.cursor() retorne nosso adaptador
         original_cursor_method = conn.cursor
-        conn.cursor = lambda: CursorAdapter(original_cursor_method())
+        def adapted_cursor():
+            return conn._adapted_cursor
+        conn.cursor = adapted_cursor
         
         return conn
-
 
 
 def is_postgres():
@@ -96,74 +99,138 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Tabela: servicos
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS servicos (
-            id SERIAL PRIMARY KEY,
-            nome VARCHAR NOT NULL,
-            descricao TEXT DEFAULT '',
-            duracao_minutos INTEGER NOT NULL,
-            valor DECIMAL(10,2) NOT NULL,
-            ativo INTEGER NOT NULL DEFAULT 1
-        )
-    ''')
+    if is_postgres():
+        # PostgreSQL - usar tipo SERIAL para auto-increment
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS servicos (
+                id SERIAL PRIMARY KEY,
+                nome TEXT NOT NULL,
+                descricao TEXT DEFAULT '',
+                duracao_minutos INTEGER NOT NULL,
+                valor REAL NOT NULL,
+                ativo INTEGER NOT NULL DEFAULT 1
+            )
+        ''')
 
-    # Tabela: agendamentos
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS agendamentos (
-            id VARCHAR PRIMARY KEY,
-            hash_id VARCHAR NOT NULL UNIQUE,
-            cliente_nome VARCHAR NOT NULL,
-            servico_id INTEGER NOT NULL,
-            valor_pago DECIMAL(10,2) DEFAULT 0,
-            valor_original DECIMAL(10,2) NOT NULL,
-            data_hora_inicio TIMESTAMP NOT NULL,
-            data_hora_fim TIMESTAMP NOT NULL,
-            status VARCHAR NOT NULL DEFAULT 'agendado',
-            nota_opcional TEXT DEFAULT '',
-            telefone_contato VARCHAR DEFAULT '',
-            created_at TIMESTAMP NOT NULL,
-            updated_at TIMESTAMP NOT NULL,
-            FOREIGN KEY (servico_id) REFERENCES servicos(id)
-        )
-    ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS agendamentos (
+                id TEXT PRIMARY KEY,
+                hash_id TEXT NOT NULL UNIQUE,
+                cliente_nome TEXT NOT NULL,
+                servico_id INTEGER NOT NULL,
+                valor_pago REAL DEFAULT 0,
+                valor_original REAL NOT NULL,
+                data_hora_inicio TEXT NOT NULL,
+                data_hora_fim TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'agendado',
+                nota_opcional TEXT DEFAULT '',
+                telefone_contato TEXT DEFAULT '',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (servico_id) REFERENCES servicos(id)
+            )
+        ''')
 
-    # Tabela: bloqueios
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS bloqueios (
-            id VARCHAR PRIMARY KEY,
-            data DATE NOT NULL,
-            hora_inicio VARCHAR DEFAULT '',
-            hora_fim VARCHAR DEFAULT '',
-            motivo TEXT DEFAULT ''
-        )
-    ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS bloqueios (
+                id TEXT PRIMARY KEY,
+                data TEXT NOT NULL,
+                hora_inicio TEXT DEFAULT '',
+                hora_fim TEXT DEFAULT '',
+                motivo TEXT DEFAULT ''
+            )
+        ''')
 
-    # Tabela: configuracao_horarios
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS configuracao_horarios (
-            id SERIAL PRIMARY KEY,
-            dia_semana INTEGER NOT NULL,
-            abertura VARCHAR NOT NULL,
-            fechamento VARCHAR NOT NULL,
-            ativo INTEGER NOT NULL DEFAULT 1,
-            intervalo_corte_minutos INTEGER NOT NULL DEFAULT 30
-        )
-    ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS configuracao_horarios (
+                id SERIAL PRIMARY KEY,
+                dia_semana INTEGER NOT NULL,
+                abertura TEXT NOT NULL,
+                fechamento TEXT NOT NULL,
+                ativo INTEGER NOT NULL DEFAULT 1,
+                intervalo_corte_minutos INTEGER NOT NULL DEFAULT 30
+            )
+        ''')
 
-    # Índices
-    cursor.execute('''
-        CREATE INDEX IF NOT EXISTS idx_agendamentos_data
-        ON agendamentos(data_hora_inicio)
-    ''')
-    cursor.execute('''
-        CREATE INDEX IF NOT EXISTS idx_agendamentos_hash
-        ON agendamentos(hash_id)
-    ''')
-    cursor.execute('''
-        CREATE INDEX IF NOT EXISTS idx_agendamentos_status
-        ON agendamentos(status)
-    ''')
+        # Índices
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_agendamentos_data
+            ON agendamentos(data_hora_inicio)
+        ''')
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_agendamentos_hash
+            ON agendamentos(hash_id)
+        ''')
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_agendamentos_status
+            ON agendamentos(status)
+        ''')
+    else:
+        # SQLite
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS servicos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nome TEXT NOT NULL,
+                descricao TEXT DEFAULT '',
+                duracao_minutos INTEGER NOT NULL,
+                valor REAL NOT NULL,
+                ativo INTEGER NOT NULL DEFAULT 1
+            )
+        ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS agendamentos (
+                id TEXT PRIMARY KEY,
+                hash_id TEXT NOT NULL UNIQUE,
+                cliente_nome TEXT NOT NULL,
+                servico_id INTEGER NOT NULL,
+                valor_pago REAL DEFAULT 0,
+                valor_original REAL NOT NULL,
+                data_hora_inicio TEXT NOT NULL,
+                data_hora_fim TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'agendado',
+                nota_opcional TEXT DEFAULT '',
+                telefone_contato TEXT DEFAULT '',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (servico_id) REFERENCES servicos(id)
+            )
+        ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS bloqueios (
+                id TEXT PRIMARY KEY,
+                data TEXT NOT NULL,
+                hora_inicio TEXT DEFAULT '',
+                hora_fim TEXT DEFAULT '',
+                motivo TEXT DEFAULT ''
+            )
+        ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS configuracao_horarios (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                dia_semana INTEGER NOT NULL,
+                abertura TEXT NOT NULL,
+                fechamento TEXT NOT NULL,
+                ativo INTEGER NOT NULL DEFAULT 1,
+                intervalo_corte_minutos INTEGER NOT NULL DEFAULT 30
+            )
+        ''')
+
+        # Índices
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_agendamentos_data
+            ON agendamentos(data_hora_inicio)
+        ''')
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_agendamentos_hash
+            ON agendamentos(hash_id)
+        ''')
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_agendamentos_status
+            ON agendamentos(status)
+        ''')
 
     conn.commit()
     conn.close()
@@ -175,8 +242,9 @@ def seed_default_data():
     cursor = conn.cursor()
 
     # Serviços padrão
-    cursor.execute('SELECT COUNT(*) AS total FROM servicos')
-    if cursor.fetchone()['total'] == 0:
+    cursor.execute('SELECT COUNT(*) as total FROM servicos')
+    row = cursor.fetchone()
+    if row['total'] == 0:
         servicos = [
             ('Corte Social', 'Corte tradicional com tesoura e máquina', 30, 35.00),
             ('Barba', 'Aparação e modelagem de barba', 20, 20.00),
@@ -184,23 +252,15 @@ def seed_default_data():
             ('Degradê', 'Corte degradê americano ou social', 40, 45.00),
             ('Hidratação Capilar', 'Hidratação completa dos fios', 30, 30.00),
         ]
-        if is_postgres():
-            # PostgreSQL: usar loop com execute (executemany tem sintaxe diferente)
-            for s in servicos:
-                cursor.execute(
-                    'INSERT INTO servicos (nome, descricao, duracao_minutos, valor) VALUES (%s, %s, %s, %s)',
-                    s
-                )
-        else:
-            # SQLite
-            cursor.executemany(
-                'INSERT INTO servicos (nome, descricao, duracao_minutos, valor) VALUES (?, ?, ?, ?)',
-                servicos
-            )
+        cursor.executemany(
+            'INSERT INTO servicos (nome, descricao, duracao_minutos, valor) VALUES (%s, %s, %s, %s)',
+            servicos
+        )
 
     # Horários padrão (seg-sex 08:00-19:00, sáb 08:00-17:00)
-    cursor.execute('SELECT COUNT(*) AS total FROM configuracao_horarios')
-    if cursor.fetchone()['total'] == 0:
+    cursor.execute('SELECT COUNT(*) as total FROM configuracao_horarios')
+    row = cursor.fetchone()
+    if row['total'] == 0:
         horarios = [
             (0, '00:00', '00:00', 0, 30),  # Domingo - fechado
             (1, '08:00', '19:00', 1, 30),  # Segunda
@@ -210,19 +270,10 @@ def seed_default_data():
             (5, '08:00', '19:00', 1, 30),  # Sexta
             (6, '08:00', '17:00', 1, 30),  # Sábado
         ]
-        if is_postgres():
-            # PostgreSQL: usar loop com execute
-            for h in horarios:
-                cursor.execute(
-                    'INSERT INTO configuracao_horarios (dia_semana, abertura, fechamento, ativo, intervalo_corte_minutos) VALUES (%s, %s, %s, %s, %s)',
-                    h
-                )
-        else:
-            # SQLite
-            cursor.executemany(
-                'INSERT INTO configuracao_horarios (dia_semana, abertura, fechamento, ativo, intervalo_corte_minutos) VALUES (?, ?, ?, ?, ?)',
-                horarios
-            )
+        cursor.executemany(
+            'INSERT INTO configuracao_horarios (dia_semana, abertura, fechamento, ativo, intervalo_corte_minutos) VALUES (%s, %s, %s, %s, %s)',
+            horarios
+        )
 
     conn.commit()
     conn.close()

@@ -36,29 +36,22 @@ def minutes_to_time(minutes: int) -> str:
     return f'{h:02d}:{m:02d}'
 
 
-def formatar_data_br(data_str) -> str:
-    """Converte ISO date para DD/MM. Aceita string ISO ou objeto datetime."""
+def formatar_data_br(data_str: str) -> str:
+    """Converte ISO date ou ISO datetime para DD/MM."""
     try:
-        if isinstance(data_str, datetime):
-            d = data_str
-        else:
-            d = datetime.fromisoformat(str(data_str))
+        d = datetime.fromisoformat(data_str)
         return d.strftime('%d/%m')
     except:
-        return str(data_str)
+        return data_str
 
 
-def formatar_hora_br(data_str) -> str:
-    """Extrai HH:MM de uma string ISO datetime. Aceita string ISO ou objeto datetime."""
+def formatar_hora_br(data_str: str) -> str:
+    """Extrai HH:MM de uma string ISO datetime."""
     try:
-        if isinstance(data_str, datetime):
-            d = data_str
-        else:
-            d = datetime.fromisoformat(str(data_str))
+        d = datetime.fromisoformat(data_str)
         return d.strftime('%H:%M')
     except:
-        return str(data_str)
-
+        return data_str
 
 
 def calcular_slots_disponiveis(
@@ -217,6 +210,7 @@ def validar_agendamento(
 def calcular_resumo_financeiro(agendamentos: list) -> dict:
     """
     Calcula o resumo financeiro a partir de uma lista de agendamentos.
+    Converte Decimal para float para serialização JSON.
     """
     total_bruto = 0.0
     total_liquido = 0.0
@@ -226,10 +220,13 @@ def calcular_resumo_financeiro(agendamentos: list) -> dict:
     agendados = 0
 
     for ag in agendamentos:
+        # Converter valores para float (PostgreSQL retorna Decimal)
+        valor_original = float(ag.get('valor_original', 0) or 0)
+        valor_pago = float(ag.get('valor_pago', 0) or 0)
+
         if ag['status'] == 'concluido':
-            # Converter para float para evitar erro com decimal.Decimal do PostgreSQL
-            total_bruto += float(ag['valor_original'])
-            total_liquido += float(ag['valor_pago']) if ag['valor_pago'] else float(ag['valor_original'])
+            total_bruto += valor_original
+            total_liquido += valor_pago if valor_pago else valor_original
             concluidos += 1
         elif ag['status'] == 'cancelado':
             cancelados += 1
