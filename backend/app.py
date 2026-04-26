@@ -24,6 +24,7 @@ from services import (
 
 app = Flask(__name__, static_folder=None)
 CORS(app)
+_db_initialized = False
 
 # Configurações
 ADMIN_SECRET = os.environ.get('ADMIN_SECRET', 'admbarber1904')
@@ -40,6 +41,12 @@ FRONTEND_PATH = os.path.join(os.path.dirname(__file__), '..', 'frontend')
 @app.route('/')
 def index():
     return send_from_directory(FRONTEND_PATH, 'index.html')
+
+
+@app.route('/health', methods=['GET'])
+def health():
+    """Health check simples para o Render."""
+    return jsonify({'status': 'ok'}), 200
 
 
 @app.route('/admin')
@@ -718,11 +725,20 @@ def admin_remover_bloqueio(bl_id):
 
 # ===================== INICIALIZAÇÃO =====================
 
+def initialize_database_once():
+    """Inicializa o banco uma única vez por processo."""
+    global _db_initialized
+    if _db_initialized:
+        return
+    print('[INFO] Inicializando banco de dados...')
+    init_db()
+    seed_default_data()
+    _db_initialized = True
+    print('[OK] Sistema BarbeCity Jaraguá iniciado!')
+
+
 # Inicializar banco ao importar (para gunicorn)
-print('[INFO] Inicializando banco de dados...')
-init_db()
-seed_default_data()
-print('[OK] Sistema BarbeCity Jaraguá iniciado!')
+initialize_database_once()
 
 if __name__ == '__main__':
     import sys
