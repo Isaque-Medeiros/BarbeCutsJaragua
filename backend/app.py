@@ -190,8 +190,12 @@ def buscar_horarios():
     )
     agendamentos = [dict(row) for row in cursor.fetchall()]
 
-    # Buscar bloqueios para a data
-    cursor.execute('SELECT * FROM bloqueios WHERE data = %s', (data_str,))
+    # Buscar bloqueios que afetem a data (data específica ou dentro de intervalo)
+    cursor.execute('''
+        SELECT * FROM bloqueios 
+        WHERE data = %s 
+           OR (data_fim IS NOT NULL AND data_fim != '' AND %s BETWEEN data AND data_fim)
+    ''', (data_str, data_str))
     bloqueios = [dict(row) for row in cursor.fetchall()]
 
     conn.close()
