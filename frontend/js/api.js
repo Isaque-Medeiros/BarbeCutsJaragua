@@ -114,6 +114,10 @@ async function adminCancelarAgendamento(id) {
     return apiDelete(`/api/admin/agendamentos/${id}`);
 }
 
+async function adminLimparCancelados() {
+    return apiDelete('/api/admin/agendamentos/cancelados', true);
+}
+
 async function adminListarServicos() {
     return apiGet('/api/admin/servicos', true);
 }
@@ -146,7 +150,10 @@ async function adminRemoverBloqueio(id) {
 
 function formatarDataISO(data) {
     const d = new Date(data);
-    return d.toISOString().split('T')[0];
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 function formatarDataBR(dataISO) {

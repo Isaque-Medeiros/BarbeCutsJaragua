@@ -564,6 +564,22 @@ def admin_atualizar_agendamento(ag_id):
     return jsonify({'success': True})
 
 
+@app.route('/api/admin/agendamentos/cancelados', methods=['DELETE'])
+def admin_limpar_cancelados():
+    """Remove todos os agendamentos com status 'cancelado'."""
+    if not verificar_admin():
+        return jsonify({'erro': 'Não autorizado.'}), 401
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM agendamentos WHERE status = 'cancelado'")
+    count = cursor.rowcount
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'removidos': count})
+
+
 @app.route('/api/admin/agendamentos/<ag_id>', methods=['DELETE'])
 def admin_cancelar_agendamento(ag_id):
     """Cancela um agendamento (soft delete: muda status)."""

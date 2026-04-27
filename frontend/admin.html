@@ -66,9 +66,14 @@
 
                 <!-- Tabela de Agendamentos -->
                 <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">📋 Agendamentos</span>
-                        <span id="agendamentos-count" class="text-secondary"></span>
+                    <div class="card-header flex justify-between items-center">
+                        <div>
+                            <span class="card-title">📋 Agendamentos</span>
+                            <span id="agendamentos-count" class="text-secondary"></span>
+                        </div>
+                        <button class="btn btn-sm btn-secondary" onclick="limparCancelados()" title="Remover agendamentos cancelados">
+                            🗑️ Limpar Cancelados
+                        </button>
                     </div>
                     <div class="table-container" id="agendamentos-table">
                         <div class="loading"><div class="spinner"></div></div>
@@ -125,14 +130,15 @@
         </div>
     </div>
 
-    <!-- Modal: Novo Serviço -->
+    <!-- Modal: Novo/Editar Serviço -->
     <div class="modal-overlay" id="modal-novo-servico">
         <div class="modal">
             <div class="modal-header">
-                <h3>Novo Serviço</h3>
+                <h3 id="modal-servico-titulo">Novo Serviço</h3>
                 <button class="modal-close" onclick="fecharModal('modal-novo-servico')">✕</button>
             </div>
-            <form id="form-novo-servico" onsubmit="return criarServico(event)">
+            <form id="form-novo-servico" onsubmit="return salvarServico(event)">
+                <input type="hidden" id="edit-servico-id">
                 <div class="form-group">
                     <label class="form-label">Nome do Serviço</label>
                     <input type="text" id="novo-servico-nome" class="form-input" required>
@@ -151,7 +157,7 @@
                         <input type="number" id="novo-servico-valor" class="form-input" required step="0.01" min="0" value="35">
                     </div>
                 </div>
-                <button type="submit" class="btn btn-primary btn-block">Criar Serviço</button>
+                <button type="submit" id="btn-salvar-servico" class="btn btn-primary btn-block">Criar Serviço</button>
             </form>
         </div>
     </div>

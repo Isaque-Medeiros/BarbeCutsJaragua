@@ -110,7 +110,12 @@ function gerarDiasDisponiveis() {
         const data = new Date(hoje);
         data.setDate(hoje.getDate() + i);
 
-        const dataStr = data.toISOString().split('T')[0];
+        // Formatar data localmente para evitar problemas de fuso horário (UTC)
+        const year = data.getFullYear();
+        const month = String(data.getMonth() + 1).padStart(2, '0');
+        const day = String(data.getDate()).padStart(2, '0');
+        const dataStr = `${year}-${month}-${day}`;
+        
         const diaSemana = data.getDay();
         const diaMes = data.getDate();
         const mes = data.getMonth() + 1;

@@ -238,8 +238,19 @@ async function cancelarAgendamento(id) {
     try {
         await adminCancelarAgendamento(id);
         mostrarToast('✅ Agendamento cancelado!', 'success');
-        carregarAgendamentos();
-        carregarStats();
+        carregarDashboard();
+    } catch (err) {
+        mostrarToast(err.message, 'error');
+    }
+}
+
+async function limparCancelados() {
+    if (!confirm('Deseja remover PERMANENTEMENTE todos os agendamentos cancelados? Esta ação não pode ser desfeita.')) return;
+
+    try {
+        const result = await adminLimparCancelados();
+        mostrarToast(`✅ ${result.removidos} agendamentos removidos!`, 'success');
+        carregarDashboard();
     } catch (err) {
         mostrarToast(err.message, 'error');
     }
@@ -270,6 +281,7 @@ async function carregarServicos() {
             <tbody>`;
 
         data.servicos.forEach(s => {
+            const sJson = JSON.stringify(s).replace(/"/g, '&quot;');
             html += `
                 <tr>
                     <td>${s.nome}</td>
@@ -277,6 +289,7 @@ async function carregarServicos() {
                     <td>${formatarMoeda(s.valor)}</td>
                     <td>${s.ativo ? '✅ Ativo' : '❌ Inativo'}</td>
                     <td>
+                        <button class="btn btn-sm btn-secondary" onclick="abrirEditarServico('${sJson}')">✏️</button>
                         ${s.ativo ? `<button class="btn btn-sm btn-danger" onclick="desativarServico(${s.id})">Desativar</button>` : ''}
                     </td>
                 </tr>
@@ -294,12 +307,29 @@ async function carregarServicos() {
 
 function abrirModalServico() {
     document.getElementById('form-novo-servico').reset();
+    document.getElementById('edit-servico-id').value = '';
+    document.getElementById('modal-servico-titulo').textContent = 'Novo Serviço';
+    document.getElementById('btn-salvar-servico').textContent = 'Criar Serviço';
     abrirModal('modal-novo-servico');
 }
 
-async function criarServico(event) {
+function abrirEditarServico(sJson) {
+    const s = JSON.parse(sJson);
+    document.getElementById('edit-servico-id').value = s.id;
+    document.getElementById('novo-servico-nome').value = s.nome;
+    document.getElementById('novo-servico-desc').value = s.descricao || '';
+    document.getElementById('novo-servico-duracao').value = s.duracao_minutos;
+    document.getElementById('novo-servico-valor').value = s.valor;
+    
+    document.getElementById('modal-servico-titulo').textContent = 'Editar Serviço';
+    document.getElementById('btn-salvar-servico').textContent = 'Salvar Alterações';
+    abrirModal('modal-novo-servico');
+}
+
+async function salvarServico(event) {
     event.preventDefault();
 
+    const id = document.getElementById('edit-servico-id').value;
     const nome = document.getElementById('novo-servico-nome').value.trim();
     const descricao = document.getElementById('novo-servico-desc').value.trim();
     const duracao = parseInt(document.getElementById('novo-servico-duracao').value);
@@ -311,8 +341,13 @@ async function criarServico(event) {
     }
 
     try {
-        await adminCriarServico({ nome, descricao, duracaoMinutos: duracao, valor });
-        mostrarToast('✅ Serviço criado!', 'success');
+        if (id) {
+            await adminAtualizarServico(id, { nome, descricao, duracaoMinutos: duracao, valor });
+            mostrarToast('✅ Serviço atualizado!', 'success');
+        } else {
+            await adminCriarServico({ nome, descricao, duracaoMinutos: duracao, valor });
+            mostrarToast('✅ Serviço criado!', 'success');
+        }
         fecharModal('modal-novo-servico');
         carregarServicos();
     } catch (err) {
