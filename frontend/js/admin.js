@@ -290,7 +290,11 @@ async function carregarServicos() {
                     <td>${s.ativo ? '✅ Ativo' : '❌ Inativo'}</td>
                     <td>
                         <button class="btn btn-sm btn-secondary" onclick="abrirEditarServico('${sJson}')">✏️</button>
-                        ${s.ativo ? `<button class="btn btn-sm btn-danger" onclick="desativarServico(${s.id})">Desativar</button>` : ''}
+                        ${s.ativo ? 
+                            `<button class="btn btn-sm btn-danger" onclick="desativarServico(${s.id})">Desativar</button>` : 
+                            `<button class="btn btn-sm btn-success" onclick="reativarServico(${s.id})" style="margin-right: 5px;">Reativar</button>
+                             <button class="btn btn-sm btn-danger" onclick="excluirServicoPermanentemente(${s.id})">Excluir</button>`
+                        }
                     </td>
                 </tr>
             `;
@@ -361,6 +365,30 @@ async function desativarServico(id) {
     try {
         await adminDesativarServico(id);
         mostrarToast('✅ Serviço desativado!', 'success');
+        carregarServicos();
+    } catch (err) {
+        mostrarToast(err.message, 'error');
+    }
+}
+
+async function reativarServico(id) {
+    if (!confirm('Reativar este serviço?')) return;
+
+    try {
+        await adminReativarServico(id);
+        mostrarToast('✅ Serviço reativado!', 'success');
+        carregarServicos();
+    } catch (err) {
+        mostrarToast(err.message, 'error');
+    }
+}
+
+async function excluirServicoPermanentemente(id) {
+    if (!confirm('EXCLUIR PERMANENTEMENTE este serviço?\n\n⚠️  Esta ação não pode ser desfeita!')) return;
+
+    try {
+        await adminExcluirServicoPermanentemente(id);
+        mostrarToast('✅ Serviço excluído permanentemente!', 'success');
         carregarServicos();
     } catch (err) {
         mostrarToast(err.message, 'error');

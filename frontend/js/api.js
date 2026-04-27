@@ -134,6 +134,14 @@ async function adminDesativarServico(id) {
     return apiDelete(`/api/admin/servicos/${id}`);
 }
 
+async function adminReativarServico(id) {
+    return apiPost(`/api/admin/servicos/${id}/reativar`, {}, true);
+}
+
+async function adminExcluirServicoPermanentemente(id) {
+    return apiDelete(`/api/admin/servicos/${id}/permanentemente`, true);
+}
+
 async function adminListarBloqueios() {
     return apiGet('/api/admin/bloqueios', true);
 }

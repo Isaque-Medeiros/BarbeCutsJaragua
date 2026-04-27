@@ -731,6 +731,46 @@ def admin_desativar_servico(servico_id):
     return jsonify({'success': True})
 
 
+@app.route('/api/admin/servicos/<int:servico_id>/reativar', methods=['POST'])
+def admin_reativar_servico(servico_id):
+    """Reativa um serviço desativado."""
+    if not verificar_admin():
+        return jsonify({'erro': 'Não autorizado.'}), 401
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE servicos SET ativo = 1 WHERE id = %s', (servico_id,))
+
+    if cursor.rowcount == 0:
+        conn.close()
+        return jsonify({'erro': 'Serviço não encontrado.'}), 404
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/admin/servicos/<int:servico_id>/permanentemente', methods=['DELETE'])
+def admin_excluir_servico_permanentemente(servico_id):
+    """Exclui permanentemente um serviço (hard delete)."""
+    if not verificar_admin():
+        return jsonify({'erro': 'Não autorizado.'}), 401
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM servicos WHERE id = %s', (servico_id,))
+
+    if cursor.rowcount == 0:
+        conn.close()
+        return jsonify({'erro': 'Serviço não encontrado.'}), 404
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True})
+
+
 # ===================== CRUD DE BLOQUEIOS (ADMIN) =====================
 
 @app.route('/api/admin/bloqueios', methods=['GET'])
