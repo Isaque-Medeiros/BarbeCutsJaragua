@@ -759,6 +759,7 @@ def admin_criar_bloqueio():
         return jsonify({'erro': 'Dados são obrigatórios.'}), 400
 
     data = dados.get('data', '')
+    data_fim = dados.get('dataFim', '')
     hora_inicio = dados.get('horaInicio', '')
     hora_fim = dados.get('horaFim', '')
     motivo = dados.get('motivo', '').strip()
@@ -771,8 +772,8 @@ def admin_criar_bloqueio():
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        'INSERT INTO bloqueios (id, data, hora_inicio, hora_fim, motivo) VALUES (%s, %s, %s, %s, %s)',
-        (bl_id, data, hora_inicio, hora_fim, motivo)
+        'INSERT INTO bloqueios (id, data, data_fim, hora_inicio, hora_fim, motivo) VALUES (%s, %s, %s, %s, %s, %s)',
+        (bl_id, data, data_fim, hora_inicio, hora_fim, motivo)
     )
     conn.commit()
     conn.close()

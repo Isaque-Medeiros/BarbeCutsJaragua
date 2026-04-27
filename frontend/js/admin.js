@@ -383,6 +383,9 @@ async function carregarBloqueios() {
 
         data.bloqueios.forEach(b => {
             const dataBr = formatarDataBR(b.data);
+            const dataFimBr = b.data_fim ? formatarDataBR(b.data_fim) : '';
+            const intervaloData = dataFimBr ? `${dataBr} até ${dataFimBr}` : dataBr;
+            
             const horario = b.hora_inicio && b.hora_fim
                 ? `${b.hora_inicio} às ${b.hora_fim}`
                 : 'Dia inteiro';
@@ -390,7 +393,7 @@ async function carregarBloqueios() {
             html += `
                 <div class="flex items-center justify-between" style="background: var(--bg-tertiary); padding: 0.75rem 1rem; border-radius: var(--radius);">
                     <div>
-                        <strong>${dataBr}</strong> — ${horario}
+                        <strong>${intervaloData}</strong> — ${horario}
                         ${b.motivo ? `<br><span class="text-secondary">${b.motivo}</span>` : ''}
                     </div>
                     <button class="btn btn-sm btn-danger" onclick="removerBloqueio('${b.id}')">✕</button>

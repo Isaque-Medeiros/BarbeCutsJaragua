@@ -135,19 +135,22 @@ def calcular_slots_disponiveis(
 
     # Remover slots em horários bloqueados
     for bl in bloqueios:
-        if bl.get('hora_inicio') and bl.get('hora_fim'):
-            bl_inicio_min = time_to_minutes(bl['hora_inicio'])
-            bl_fim_min = time_to_minutes(bl['hora_fim'])
-            slots = [
-                s for s in slots
-                if not (
-                    time_to_minutes(s['horaInicio']) < bl_fim_min and
-                    time_to_minutes(s['horaFim']) > bl_inicio_min
-                )
-            ]
-        else:
-            # Bloqueio de dia inteiro
-            return []
+        # Verificar se a data está bloqueada (considerando intervalo)
+        if data_esta_bloqueada(data, bl):
+            if bl.get('hora_inicio') and bl.get('hora_fim'):
+                # Bloqueio parcial por horário
+                bl_inicio_min = time_to_minutes(bl['hora_inicio'])
+                bl_fim_min = time_to_minutes(bl['hora_fim'])
+                slots = [
+                    s for s in slots
+                    if not (
+                        time_to_minutes(s['horaInicio']) < bl_fim_min and
+                        time_to_minutes(s['horaFim']) > bl_inicio_min
+                    )
+                ]
+            else:
+                # Bloqueio de dia inteiro
+                return []
 
     return slots
 
@@ -196,15 +199,54 @@ def validar_agendamento(
 
     # Validar bloqueios
     for bl in bloqueios:
-        if bl.get('hora_inicio') and bl.get('hora_fim'):
-            hora_inicio = formatar_hora_br(data_hora_inicio)
-            if (time_to_minutes(hora_inicio) >= time_to_minutes(bl['hora_inicio']) and
-                time_to_minutes(hora_inicio) < time_to_minutes(bl['hora_fim'])):
-                return {'valido': False, 'erro': 'Horário bloqueado. Tente outro dia/horário.'}
-        else:
-            return {'valido': False, 'erro': 'Dia bloqueado. Tente outra data.'}
+        # Extrair apenas a data da string data_hora_inicio (YYYY-MM-DD HH:MM:SS)
+        data_agendamento = data_hora_inicio.split(' ')[0]
+        
+        # Verificar se a data está bloqueada (considerando intervalo)
+        if data_esta_bloqueada(data_agendamento, bl):
+            if bl.get('hora_inicio') and bl.get('hora_fim'):
+                # Bloqueio parcial por horário
+                hora_inicio = formatar_hora_br(data_hora_inicio)
+                if (time_to_minutes(hora_inicio) >= time_to_minutes(bl['hora_inicio']) and
+                    time_to_minutes(hora_inicio) < time_to_minutes(bl['hora_fim'])):
+                    return {'valido': False, 'erro': 'Horário bloqueado. Tente outro dia/horário.'}
+            else:
+                # Bloqueio de dia inteiro
+                return {'valido': False, 'erro': 'Dia bloqueado. Tente outra data.'}
 
     return {'valido': True}
+
+
+def data_esta_bloqueada(data: str, bloqueio: dict) -> bool:
+    """
+    Verifica se uma data está dentro do intervalo de um bloqueio.
+    
+    Args:
+        data: Data no formato 'YYYY-MM-DD'
+        bloqueio: Dict com 'data' e 'data_fim' (opcional)
+        
+    Returns:
+        True se a data estiver bloqueada, False caso contrário
+    """
+    data_bloqueio = bloqueio.get('data', '')
+    data_fim_bloqueio = bloqueio.get('data_fim', '')
+    
+    if not data_bloqueio:
+        return False
+        
+    # Se não há data_fim, verifica apenas igualdade
+    if not data_fim_bloqueio:
+        return data == data_bloqueio
+    
+    # Se há data_fim, verifica se está no intervalo [data_bloqueio, data_fim_bloqueio]
+    try:
+        data_atual = datetime.strptime(data, '%Y-%m-%d').date()
+        data_inicio_bloqueio = datetime.strptime(data_bloqueio, '%Y-%m-%d').date()
+        data_fim_bloqueio_obj = datetime.strptime(data_fim_bloqueio, '%Y-%m-%d').date()
+        
+        return data_inicio_bloqueio <= data_atual <= data_fim_bloqueio_obj
+    except (ValueError, TypeError):
+        return False
 
 
 def calcular_resumo_financeiro(agendamentos: list) -> dict:

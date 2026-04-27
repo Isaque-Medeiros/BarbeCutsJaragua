@@ -135,6 +135,7 @@ def init_db():
             CREATE TABLE IF NOT EXISTS bloqueios (
                 id TEXT PRIMARY KEY,
                 data TEXT NOT NULL,
+                data_fim TEXT DEFAULT '',
                 hora_inicio TEXT DEFAULT '',
                 hora_fim TEXT DEFAULT '',
                 motivo TEXT DEFAULT ''
@@ -201,6 +202,7 @@ def init_db():
             CREATE TABLE IF NOT EXISTS bloqueios (
                 id TEXT PRIMARY KEY,
                 data TEXT NOT NULL,
+                data_fim TEXT DEFAULT '',
                 hora_inicio TEXT DEFAULT '',
                 hora_fim TEXT DEFAULT '',
                 motivo TEXT DEFAULT ''
@@ -257,18 +259,18 @@ def seed_default_data():
             servicos
         )
 
-    # Horários padrão (seg-sex 08:00-19:00, sáb 08:00-17:00)
+    # Horários padrão (seg-sáb 08:00-21:30, dom 08:00-18:00)
     cursor.execute('SELECT COUNT(*) as total FROM configuracao_horarios')
     row = cursor.fetchone()
     if row['total'] == 0:
         horarios = [
-            (0, '00:00', '00:00', 0, 30),  # Domingo - fechado
-            (1, '08:00', '19:00', 1, 30),  # Segunda
-            (2, '08:00', '19:00', 1, 30),  # Terça
-            (3, '08:00', '19:00', 1, 30),  # Quarta
-            (4, '08:00', '19:00', 1, 30),  # Quinta
-            (5, '08:00', '19:00', 1, 30),  # Sexta
-            (6, '08:00', '17:00', 1, 30),  # Sábado
+            (0, '08:00', '18:00', 1, 30),  # Domingo
+            (1, '08:00', '21:30', 1, 30),  # Segunda
+            (2, '08:00', '21:30', 1, 30),  # Terça
+            (3, '08:00', '21:30', 1, 30),  # Quarta
+            (4, '08:00', '21:30', 1, 30),  # Quinta
+            (5, '08:00', '21:30', 1, 30),  # Sexta
+            (6, '08:00', '21:30', 1, 30),  # Sábado
         ]
         cursor.executemany(
             'INSERT INTO configuracao_horarios (dia_semana, abertura, fechamento, ativo, intervalo_corte_minutos) VALUES (%s, %s, %s, %s, %s)',
