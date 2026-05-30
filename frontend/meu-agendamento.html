@@ -93,8 +93,9 @@
                         </div>
                         <div class="resumo-row">
                             <span class="resumo-label">WhatsApp</span>
-                            <span class="resumo-value" id="consulta-telefone">—</span>
+                            <span class="resumo-value" id="consulta-whatsapp">—</span>
                         </div>
+                
                 
                     </div>
                     <div id="consulta-actions" class="hidden" style="margin-top: 1rem; text-align: center;">
@@ -234,7 +235,8 @@
                 document.getElementById('consulta-data').textContent = formatarDataBR(ag.dataHoraInicio);
                 document.getElementById('consulta-horario').textContent = `${formatarHora(ag.dataHoraInicio)} às ${formatarHora(ag.dataHoraFim)}`;
                 document.getElementById('consulta-valor').textContent = formatarMoeda(ag.valor);
-                document.getElementById('consulta-telefone').textContent = ag.telefoneContato || '—';
+                document.getElementById('consulta-whatsapp').textContent = ag.telefoneContato || '—';
+                
 
                 const statusSpan = document.getElementById('consulta-status');
                 statusSpan.innerHTML = `<span class="badge ${getStatusBadge(ag.status)}">${getStatusLabel(ag.status)}</span>`;
