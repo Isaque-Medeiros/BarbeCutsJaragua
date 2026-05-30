@@ -65,6 +65,11 @@ def calcular_slots_disponiveis(
 ) -> list:
     """
     Calcula os slots disponíveis para uma determinada data e serviço.
+    
+    Gera slots a cada 15 minutos de intervalo, garantindo que:
+    - O horário de início + duração do serviço não ultrapasse o fechamento
+    - Não haja conflito com agendamentos já existentes
+    - Não haja conflito com bloqueios
 
     Args:
         data: Data no formato 'YYYY-MM-DD'
@@ -85,37 +90,41 @@ def calcular_slots_disponiveis(
     fechamento = config_horario['fechamento']
     buffer = config_horario.get('intervalo_corte_minutos', servico_buffer)
 
-    # Duração total do slot = duração do serviço + buffer
-    duracao_total = servico_duracao + buffer
-
     abertura_min = time_to_minutes(abertura)
     fechamento_min = time_to_minutes(fechamento)
 
-    # O último slot deve terminar até o fechamento
+    # Intervalo entre inícios de slots: 15 minutos
+    INTERVALO_SLOTS = 15
+
+    # O serviço deve caber dentro do horário de funcionamento
+    # O slot termina quando o serviço acaba (sem contar o buffer)
     ultimo_inicio_valido = fechamento_min - servico_duracao
 
     slots = []
 
-    # Gerar slots brutos
+    # Gerar slots brutos a cada 15 minutos
     hora_atual = abertura_min
     while hora_atual <= ultimo_inicio_valido:
-        hora_fim = hora_atual + duracao_total
-        if hora_fim > fechamento_min:
-            break
+        # O fim do slot é apenas o fim do serviço (sem buffer)
+        hora_fim_servico = hora_atual + servico_duracao
+        # O fim do slot com buffer (para conflitos)
+        hora_fim_com_buffer = hora_atual + servico_duracao + buffer
 
         slot_inicio = minutes_to_time(hora_atual)
-        slot_fim = minutes_to_time(hora_fim)
+        slot_fim = minutes_to_time(hora_fim_servico)
 
         slots.append({
             'horaInicio': slot_inicio,
             'horaFim': slot_fim,
+            'horaFimBuffer': minutes_to_time(hora_fim_com_buffer),
             'disponivel': True,
             'servicoId': servico_id
         })
 
-        hora_atual += duracao_total
+        hora_atual += INTERVALO_SLOTS
 
     # Remover slots conflitantes com agendamentos existentes
+    # Usa horaFimBuffer (serviço + buffer) para verificar conflitos
     for ag in agendamentos_existentes:
         if ag['status'] in ('cancelado',):
             continue
@@ -129,7 +138,7 @@ def calcular_slots_disponiveis(
             s for s in slots
             if not (
                 time_to_minutes(s['horaInicio']) < ag_fim_min and
-                time_to_minutes(s['horaFim']) > ag_inicio_min
+                time_to_minutes(s['horaFimBuffer']) > ag_inicio_min
             )
         ]
 

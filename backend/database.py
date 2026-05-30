@@ -75,17 +75,28 @@ def get_connection():
             def close(self):
                 self.cursor.close()
 
-        # Retornar conexão com cursor adaptado
-        original_cursor = conn.cursor()
-        conn._adapted_cursor = CursorAdapter(original_cursor)
-        
-        # Monkey-patch para que conn.cursor() retorne nosso adaptador
-        original_cursor_method = conn.cursor
-        def adapted_cursor():
-            return conn._adapted_cursor
-        conn.cursor = adapted_cursor
-        
-        return conn
+        # Usar uma classe wrapper para a conexão que retorna o cursor adaptado
+        class ConnectionWrapper:
+            def __init__(self, original_conn):
+                self._conn = original_conn
+                self._cursor = CursorAdapter(original_conn.cursor())
+            
+            def cursor(self):
+                return self._cursor
+            
+            def commit(self):
+                self._conn.commit()
+            
+            def close(self):
+                self._conn.close()
+            
+            def execute(self, query, params=None):
+                return self._cursor.execute(query, params)
+            
+            def executemany(self, query, params_list):
+                return self._cursor.executemany(query, params_list)
+
+        return ConnectionWrapper(conn)
 
 
 def is_postgres():
@@ -242,53 +253,114 @@ def init_db():
     conn.close()
 
 
-def seed_default_data():
-    """Insere dados padrão se as tabelas estiverem vazias."""
+def run_migrations():
+    """
+    Executa migrações para atualizar bancos existentes.
+    Isso garante que mesmo bancos já criados recebam as novas colunas/dados.
+    """
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Serviços padrão
-    cursor.execute('SELECT COUNT(*) as total FROM servicos')
-    row = cursor.fetchone()
-    if row['total'] == 0:
-        servicos = [
-            ('Corte', 'Corte tradicional com tesoura e máquina', 30, 35.00, 'principal'),
-            ('Barba', 'Aparação e modelagem de barba', 20, 15.00, 'principal'),
-            ('Combo Corte + Barba', 'Corte social completo com barba', 50, 50.00, 'principal'),
-            ('Sobrancelha', 'Design de sobrancelha', 15, 10.00, 'principal'),
-            ('Luzes', 'Luzes com técnica profissional', 70, 40.00, 'adicional'),
-            ('Botox', 'Botox capilar', 40, 60.00, 'adicional'),
-            ('Corte + Luzes', 'Corte completo com luzes', 100, 75.00, 'principal'),
-            ('Corte + Botox', 'Corte completo com botox capilar', 70, 90.00, 'principal'),
-        ]
-        cursor.executemany(
-            'INSERT INTO servicos (nome, descricao, duracao_minutos, valor, tipo) VALUES (%s, %s, %s, %s, %s)',
-            servicos
-        )
+    # ===== Migration 1: Adicionar coluna 'tipo' se não existir =====
+    if is_postgres():
+        cursor.execute('''
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'servicos' AND column_name = 'tipo'
+                ) THEN
+                    ALTER TABLE servicos ADD COLUMN tipo TEXT DEFAULT 'principal';
+                END IF;
+            END $$;
+        ''')
+    else:
+        # SQLite - verificar se coluna existe
+        cursor.execute("PRAGMA table_info(servicos)")
+        colunas = [row[1] for row in cursor.fetchall()]
+        if 'tipo' not in colunas:
+            cursor.execute("ALTER TABLE servicos ADD COLUMN tipo TEXT DEFAULT 'principal'")
 
-    # Horários padrão
-    cursor.execute('SELECT COUNT(*) as total FROM configuracao_horarios')
-    row = cursor.fetchone()
-    if row['total'] == 0:
-        horarios = [
-            (0, '09:00', '20:00', 1, 30),  # Domingo
-            (1, '00:00', '00:00', 0, 30),  # Segunda - fechado
-            (2, '13:00', '20:00', 1, 30),  # Terça
-            (3, '13:00', '20:00', 1, 30),  # Quarta
-            (4, '13:00', '20:00', 1, 30),  # Quinta
-            (5, '13:00', '20:00', 1, 30),  # Sexta
-            (6, '09:00', '20:00', 1, 30),  # Sábado
-        ]
-        cursor.executemany(
-            'INSERT INTO configuracao_horarios (dia_semana, abertura, fechamento, ativo, intervalo_corte_minutos) VALUES (%s, %s, %s, %s, %s)',
-            horarios
+    # ===== Migration 2: Atualizar serviços existentes com os dados corretos =====
+    # Lista completa de serviços que devem existir
+    servicos_correto = [
+        ('Corte', 'Corte tradicional com tesoura e máquina', 30, 35.00, 'principal'),
+        ('Barba', 'Aparação e modelagem de barba', 20, 15.00, 'principal'),
+        ('Combo Corte + Barba', 'Corte social completo com barba', 50, 50.00, 'principal'),
+        ('Sobrancelha', 'Design de sobrancelha', 15, 10.00, 'principal'),
+        ('Luzes', 'Luzes com técnica profissional', 70, 40.00, 'adicional'),
+        ('Botox', 'Botox capilar', 40, 60.00, 'adicional'),
+        ('Corte + Luzes', 'Corte completo com luzes', 100, 75.00, 'principal'),
+        ('Corte + Botox', 'Corte completo com botox capilar', 70, 90.00, 'principal'),
+    ]
+
+    for nome, desc, duracao, valor, tipo in servicos_correto:
+        # Verificar se o serviço já existe pelo nome
+        cursor.execute('SELECT id, nome, duracao_minutos, valor, tipo FROM servicos WHERE nome = %s', (nome,))
+        existing = cursor.fetchone()
+        if existing:
+            # Atualizar dados do serviço existente
+            cursor.execute('''
+                UPDATE servicos 
+                SET descricao = %s, duracao_minutos = %s, valor = %s, tipo = %s, ativo = 1
+                WHERE nome = %s
+            ''', (desc, duracao, valor, tipo, nome))
+        else:
+            # Inserir novo serviço
+            cursor.execute('''
+                INSERT INTO servicos (nome, descricao, duracao_minutos, valor, tipo, ativo)
+                VALUES (%s, %s, %s, %s, %s, 1)
+            ''', (nome, desc, duracao, valor, tipo))
+
+    # ===== Migration 3: Atualizar intervalo_corte_minutos para 15 =====
+    cursor.execute('''
+        UPDATE configuracao_horarios 
+        SET intervalo_corte_minutos = 15
+        WHERE intervalo_corte_minutos != 15
+    ''')
+
+    # ===== Migration 4: Garantir que os horários padrão existam =====
+    # ATENÇÃO: datetime.weekday() retorna: 0=Segunda, 1=Terça, ..., 5=Sábado, 6=Domingo
+    horarios_padrao = [
+        (0, '00:00', '00:00', 0),  # Segunda - fechado
+        (1, '13:00', '20:00', 1),  # Terça
+        (2, '13:00', '20:00', 1),  # Quarta
+        (3, '13:00', '20:00', 1),  # Quinta
+        (4, '13:00', '20:00', 1),  # Sexta
+        (5, '09:00', '20:00', 1),  # Sábado
+        (6, '09:00', '20:00', 1),  # Domingo
+    ]
+
+    for dia_semana, abertura, fechamento, ativo in horarios_padrao:
+        cursor.execute(
+            'SELECT id FROM configuracao_horarios WHERE dia_semana = %s',
+            (dia_semana,)
         )
+        if not cursor.fetchone():
+            cursor.execute('''
+                INSERT INTO configuracao_horarios (dia_semana, abertura, fechamento, ativo, intervalo_corte_minutos)
+                VALUES (%s, %s, %s, %s, 15)
+            ''', (dia_semana, abertura, fechamento, ativo))
+        else:
+            # Atualizar horários existentes
+            cursor.execute('''
+                UPDATE configuracao_horarios 
+                SET abertura = %s, fechamento = %s, ativo = %s, intervalo_corte_minutos = 15
+                WHERE dia_semana = %s
+            ''', (abertura, fechamento, ativo, dia_semana))
 
     conn.commit()
     conn.close()
+    print('✅ Migrações executadas com sucesso!')
+
+
+def seed_default_data():
+    """Insere dados padrão se as tabelas estiverem vazias (mantido para compatibilidade)."""
+    # Agora as migrações fazem todo o trabalho
+    run_migrations()
 
 
 if __name__ == '__main__':
     init_db()
-    seed_default_data()
+    run_migrations()
     print('✅ Banco de dados inicializado com sucesso!')

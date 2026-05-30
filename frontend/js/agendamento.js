@@ -54,8 +54,10 @@ function setupHamburger() {
 async function carregarServicos() {
     try {
         const data = await listarServicos();
-        // Separar serviços principais dos adicionais
+        // Serviços principais (exclui os que são apenas adicionais como Corte+Luzes e Corte+Botox)
+        // Mas inclui Luzes e Botox que podem ser selecionados sozinhos OU como adicional
         servicos = data.servicos.filter(s => s.tipo !== 'adicional');
+        // Serviços que podem ser adicionais (Luzes, Botox)
         servicosAdicionais = data.servicos.filter(s => s.tipo === 'adicional');
         
         const container = document.getElementById('servicos-selecao');
@@ -71,8 +73,18 @@ async function carregarServicos() {
             card.className = 'service-card';
             card.dataset.id = s.id;
             card.onclick = () => selecionarServico(s.id);
+            
+            // Escolher ícone baseado no nome do serviço
+            let icone = '✂️';
+            const nomeLower = s.nome.toLowerCase();
+            if (nomeLower.includes('barba')) icone = '🪒';
+            else if (nomeLower.includes('sobrancelha')) icone = '✨';
+            else if (nomeLower.includes('luzes')) icone = '💡';
+            else if (nomeLower.includes('botox')) icone = '💉';
+            else if (nomeLower.includes('combo')) icone = '🔥';
+            
             card.innerHTML = `
-                <div class="service-icon">✂️</div>
+                <div class="service-icon">${icone}</div>
                 <div class="service-name">${s.nome}</div>
                 <div class="service-desc">${s.descricao || 'Serviço profissional'}</div>
                 <div class="service-footer">
