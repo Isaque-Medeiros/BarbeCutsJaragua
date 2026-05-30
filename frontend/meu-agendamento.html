@@ -41,12 +41,19 @@
         <div class="container">
             <div class="section-title">
                 <h1>🔍 Meu Agendamento</h1>
-                <p>Consulte seu agendamento pelo código de confirmação</p>
+                <p>Consulte seu agendamento pelo código de confirmação ou pelo seu telefone</p>
             </div>
 
-            <div class="card consulta-card">
+            <!-- Abas -->
+            <div class="tabs" style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; justify-content: center;">
+                <button class="tab-btn active" onclick="switchTab('codigo')" id="tab-codigo">📋 Por Código</button>
+                <button class="tab-btn" onclick="switchTab('telefone')" id="tab-telefone">📱 Por Telefone</button>
+            </div>
+
+            <!-- Consulta por Código -->
+            <div id="consulta-codigo" class="card consulta-card">
                 <div class="card-header">
-                    <span class="card-title">📋 Consultar Agendamento</span>
+                    <span class="card-title">📋 Consultar por Código</span>
                 </div>
                 <form id="consulta-form">
                     <div class="form-group">
@@ -84,13 +91,62 @@
                             <span class="resumo-label">Status</span>
                             <span id="consulta-status">—</span>
                         </div>
+                        <div class="resumo-row">
+                            <span class="resumo-label">WhatsApp</span>
+                            <span class="resumo-value" id="consulta-telefone">—</span>
+                        </div>
+                
+                    </div>
+                    <div id="consulta-actions" class="hidden" style="margin-top: 1rem; text-align: center;">
+                        <button class="btn btn-danger btn-lg" onclick="cancelarAgendamento()">
+                            ❌ Cancelar Agendamento
+                        </button>
                     </div>
                 </div>
 
                 <div id="consulta-erro" class="hidden" style="margin-top: 1rem; color: var(--danger); text-align: center;"></div>
             </div>
+
+            <!-- Consulta por Telefone -->
+            <div id="consulta-telefone" class="card consulta-card hidden">
+                <div class="card-header">
+                    <span class="card-title">📱 Consultar por Telefone</span>
+                </div>
+                <form id="consulta-telefone-form">
+                    <div class="form-group">
+                        <label class="form-label" for="telefone-input">Seu Número de WhatsApp</label>
+                        <input type="tel" id="telefone-input" class="form-input" placeholder="(11) 99999-9999" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block btn-lg">
+                        🔍 Buscar Agendamentos
+                    </button>
+                </form>
+
+                <div id="telefone-resultado" class="hidden" style="margin-top: 1.5rem;"></div>
+                <div id="telefone-erro" class="hidden" style="margin-top: 1rem; color: var(--danger); text-align: center;"></div>
+            </div>
         </div>
     </section>
+
+    <!-- Modal de Confirmação de Cancelamento -->
+    <div id="cancel-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title">❌ Cancelar Agendamento</span>
+                <button class="modal-close" onclick="fecharModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja cancelar este agendamento?</p>
+                <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.5rem;">Esta ação não pode ser desfeita.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="fecharModal()">Voltar</button>
+                <button class="btn btn-danger" id="btn-confirmar-cancelamento" onclick="confirmarCancelamento()">
+                    Sim, Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Footer -->
     <footer class="footer">
@@ -103,6 +159,9 @@
 
     <script src="/js/api.js"></script>
     <script>
+        let hashAtual = null;
+        let agendamentosEncontrados = [];
+
         // Hamburger Menu
         document.addEventListener('DOMContentLoaded', () => {
             const hamburger = document.getElementById('hamburger');
@@ -127,18 +186,32 @@
                 });
             }
 
-            // Adicionar event listener ao formulário
-            const form = document.getElementById('consulta-form');
-            if (form) {
-                form.addEventListener('submit', buscarMeuAgendamento);
+            // Adicionar event listeners aos formulários
+            const formCodigo = document.getElementById('consulta-form');
+            if (formCodigo) {
+                formCodigo.addEventListener('submit', buscarMeuAgendamento);
+            }
+
+            const formTelefone = document.getElementById('consulta-telefone-form');
+            if (formTelefone) {
+                formTelefone.addEventListener('submit', buscarPorTelefone);
             }
         });
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            
+            document.getElementById('consulta-codigo').classList.toggle('hidden', tab !== 'codigo');
+            document.getElementById('consulta-telefone').classList.toggle('hidden', tab !== 'telefone');
+        }
 
         async function buscarMeuAgendamento(event) {
             event.preventDefault();
             const hash = document.getElementById('hash-input').value.trim().toLowerCase();
             const resultadoDiv = document.getElementById('consulta-resultado');
             const erroDiv = document.getElementById('consulta-erro');
+            const actionsDiv = document.getElementById('consulta-actions');
 
             if (!hash) {
                 erroDiv.textContent = 'Por favor, digite o código do agendamento.';
@@ -154,14 +227,25 @@
                 const data = await consultarAgendamento(hash);
                 const ag = data.agendamento;
 
+                hashAtual = hash;
+
                 document.getElementById('consulta-cliente').textContent = ag.clienteNome;
                 document.getElementById('consulta-servico').textContent = ag.servico;
                 document.getElementById('consulta-data').textContent = formatarDataBR(ag.dataHoraInicio);
                 document.getElementById('consulta-horario').textContent = `${formatarHora(ag.dataHoraInicio)} às ${formatarHora(ag.dataHoraFim)}`;
                 document.getElementById('consulta-valor').textContent = formatarMoeda(ag.valor);
+                document.getElementById('consulta-telefone').textContent = ag.telefoneContato || '—';
 
                 const statusSpan = document.getElementById('consulta-status');
                 statusSpan.innerHTML = `<span class="badge ${getStatusBadge(ag.status)}">${getStatusLabel(ag.status)}</span>`;
+                
+
+                // Mostrar botão de cancelar apenas se estiver agendado
+                if (ag.status === 'agendado') {
+                    actionsDiv.classList.remove('hidden');
+                } else {
+                    actionsDiv.classList.add('hidden');
+                }
 
                 resultadoDiv.classList.remove('hidden');
                 resultadoDiv.classList.add('fade-in');
@@ -171,6 +255,123 @@
                 erroDiv.classList.remove('hidden');
             }
         }
+
+        async function buscarPorTelefone(event) {
+            event.preventDefault();
+            const telefone = document.getElementById('telefone-input').value.trim();
+            const resultadoDiv = document.getElementById('telefone-resultado');
+            const erroDiv = document.getElementById('telefone-erro');
+
+            if (!telefone) {
+                erroDiv.textContent = 'Por favor, digite seu número de telefone.';
+                erroDiv.classList.remove('hidden');
+                resultadoDiv.classList.add('hidden');
+                return;
+            }
+
+            erroDiv.classList.add('hidden');
+            resultadoDiv.classList.add('hidden');
+
+            try {
+                const data = await buscarAgendamentosPorTelefone(telefone);
+                agendamentosEncontrados = data.agendamentos;
+
+                if (agendamentosEncontrados.length === 0) {
+                    erroDiv.textContent = 'Nenhum agendamento encontrado para este telefone.';
+                    erroDiv.classList.remove('hidden');
+                    return;
+                }
+
+                let html = '<h3 style="margin-bottom: 1rem;">Agendamentos Encontrados:</h3>';
+                
+                agendamentosEncontrados.forEach(ag => {
+                    const statusClass = getStatusBadge(ag.status);
+                    const statusLabel = getStatusLabel(ag.status);
+                    
+                    html += `
+                        <div class="resumo-card" style="margin-bottom: 1rem; cursor: pointer;" onclick="consultarPorHash('${ag.hashId}')">
+                            <div class="resumo-row">
+                                <span class="resumo-label">Cliente</span>
+                                <span class="resumo-value">${ag.clienteNome}</span>
+                            </div>
+                            <div class="resumo-row">
+                                <span class="resumo-label">Serviço</span>
+                                <span class="resumo-value">${ag.servico}</span>
+                            </div>
+                            <div class="resumo-row">
+                                <span class="resumo-label">Data</span>
+                                <span class="resumo-value">${formatarDataBR(ag.dataHoraInicio)}</span>
+                            </div>
+                            <div class="resumo-row">
+                                <span class="resumo-label">Horário</span>
+                                <span class="resumo-value">${formatarHora(ag.dataHoraInicio)} às ${formatarHora(ag.dataHoraFim)}</span>
+                            </div>
+                            <div class="resumo-row">
+                                <span class="resumo-label">Status</span>
+                                <span><span class="badge ${statusClass}">${statusLabel}</span></span>
+                            </div>
+                            <div class="resumo-row">
+                                <span class="resumo-label">Código</span>
+                                <span class="resumo-value code" style="font-size: 0.8rem;">${ag.hashId}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                resultadoDiv.innerHTML = html;
+                resultadoDiv.classList.remove('hidden');
+                resultadoDiv.classList.add('fade-in');
+
+            } catch (err) {
+                erroDiv.textContent = err.message || 'Nenhum agendamento encontrado para este telefone.';
+                erroDiv.classList.remove('hidden');
+            }
+        }
+
+        function consultarPorHash(hash) {
+            // Mudar para aba de código e preencher o campo
+            switchTab('codigo');
+            document.getElementById('hash-input').value = hash;
+            document.getElementById('consulta-form').dispatchEvent(new Event('submit'));
+        }
+
+        function cancelarAgendamento() {
+            if (!hashAtual) return;
+            document.getElementById('cancel-modal').classList.remove('hidden');
+        }
+
+        function fecharModal() {
+            document.getElementById('cancel-modal').classList.add('hidden');
+        }
+
+        async function confirmarCancelamento() {
+            if (!hashAtual) return;
+
+            const btn = document.getElementById('btn-confirmar-cancelamento');
+            btn.disabled = true;
+            btn.textContent = '⏳ Cancelando...';
+
+            try {
+                await cancelarAgendamentoCliente(hashAtual);
+                mostrarToast('✅ Agendamento cancelado com sucesso!', 'success');
+                fecharModal();
+                // Recarregar a consulta
+                document.getElementById('consulta-form').dispatchEvent(new Event('submit'));
+            } catch (err) {
+                mostrarToast(err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Sim, Cancelar';
+            }
+        }
+
+        // Fechar modal ao clicar fora
+        document.addEventListener('click', (e) => {
+            const modal = document.getElementById('cancel-modal');
+            if (e.target === modal) {
+                fecharModal();
+            }
+        });
     </script>
 </body>
 </html>

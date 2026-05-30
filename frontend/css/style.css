@@ -1500,3 +1500,75 @@ tr:hover td {
     margin-top: 0.5rem;
     font-size: 1.3rem;
 }
+
+/* ============================================================
+   TABS (Meu Agendamento)
+   ============================================================ */
+.tab-btn {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    font-family: var(--font-body);
+}
+
+.tab-btn:hover {
+    border-color: var(--gold);
+    color: var(--text-primary);
+}
+
+.tab-btn.active {
+    background: var(--gold-soft);
+    border-color: var(--gold);
+    color: var(--gold);
+}
+
+/* ============================================================
+   SERVICE CARD SM (Adicionais)
+   ============================================================ */
+.service-card-sm {
+    padding: 0.6rem;
+}
+
+.service-card-sm .service-icon {
+    font-size: 1.2rem !important;
+}
+
+.service-card-sm .service-name {
+    font-size: 0.85rem !important;
+}
+
+.service-card-sm .service-price {
+    font-size: 0.8rem !important;
+}
+
+.service-card-sm .service-duration {
+    font-size: 0.7rem !important;
+}
+
+/* ============================================================
+   CONSULTA RESULT (Meu Agendamento)
+   ============================================================ */
+.consulta-result {
+    animation: fadeIn 0.3s ease;
+}
+
+.consulta-result .resumo-card {
+    cursor: default;
+}
+
+.consulta-result .resumo-card[onclick] {
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.consulta-result .resumo-card[onclick]:hover {
+    border-color: var(--gold);
+}
+
+
+

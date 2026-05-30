@@ -108,7 +108,8 @@ def init_db():
                 descricao TEXT DEFAULT '',
                 duracao_minutos INTEGER NOT NULL,
                 valor REAL NOT NULL,
-                ativo INTEGER NOT NULL DEFAULT 1
+                ativo INTEGER NOT NULL DEFAULT 1,
+                tipo TEXT DEFAULT 'principal'
             )
         ''')
 
@@ -118,6 +119,7 @@ def init_db():
                 hash_id TEXT NOT NULL UNIQUE,
                 cliente_nome TEXT NOT NULL,
                 servico_id INTEGER NOT NULL,
+                servicos_adicionais TEXT DEFAULT '',
                 valor_pago REAL DEFAULT 0,
                 valor_original REAL NOT NULL,
                 data_hora_inicio TEXT NOT NULL,
@@ -175,7 +177,8 @@ def init_db():
                 descricao TEXT DEFAULT '',
                 duracao_minutos INTEGER NOT NULL,
                 valor REAL NOT NULL,
-                ativo INTEGER NOT NULL DEFAULT 1
+                ativo INTEGER NOT NULL DEFAULT 1,
+                tipo TEXT DEFAULT 'principal'
             )
         ''')
 
@@ -185,6 +188,7 @@ def init_db():
                 hash_id TEXT NOT NULL UNIQUE,
                 cliente_nome TEXT NOT NULL,
                 servico_id INTEGER NOT NULL,
+                servicos_adicionais TEXT DEFAULT '',
                 valor_pago REAL DEFAULT 0,
                 valor_original REAL NOT NULL,
                 data_hora_inicio TEXT NOT NULL,
@@ -248,29 +252,32 @@ def seed_default_data():
     row = cursor.fetchone()
     if row['total'] == 0:
         servicos = [
-            ('Corte Social', 'Corte tradicional com tesoura e máquina', 30, 35.00),
-            ('Barba', 'Aparação e modelagem de barba', 20, 20.00),
-            ('Combo Corte + Barba', 'Corte social completo com barba', 50, 50.00),
-            ('Degradê', 'Corte degradê americano ou social', 40, 45.00),
-            ('Hidratação Capilar', 'Hidratação completa dos fios', 30, 30.00),
+            ('Corte', 'Corte tradicional com tesoura e máquina', 30, 35.00, 'principal'),
+            ('Barba', 'Aparação e modelagem de barba', 20, 15.00, 'principal'),
+            ('Combo Corte + Barba', 'Corte social completo com barba', 50, 50.00, 'principal'),
+            ('Sobrancelha', 'Design de sobrancelha', 15, 10.00, 'principal'),
+            ('Luzes', 'Luzes com técnica profissional', 70, 40.00, 'adicional'),
+            ('Botox', 'Botox capilar', 40, 60.00, 'adicional'),
+            ('Corte + Luzes', 'Corte completo com luzes', 100, 75.00, 'principal'),
+            ('Corte + Botox', 'Corte completo com botox capilar', 70, 90.00, 'principal'),
         ]
         cursor.executemany(
-            'INSERT INTO servicos (nome, descricao, duracao_minutos, valor) VALUES (%s, %s, %s, %s)',
+            'INSERT INTO servicos (nome, descricao, duracao_minutos, valor, tipo) VALUES (%s, %s, %s, %s, %s)',
             servicos
         )
 
-    # Horários padrão (seg-sáb 08:00-21:30, dom 08:00-18:00)
+    # Horários padrão
     cursor.execute('SELECT COUNT(*) as total FROM configuracao_horarios')
     row = cursor.fetchone()
     if row['total'] == 0:
         horarios = [
-            (0, '08:00', '18:00', 1, 30),  # Domingo
-            (1, '08:00', '21:30', 1, 30),  # Segunda
-            (2, '08:00', '21:30', 1, 30),  # Terça
-            (3, '08:00', '21:30', 1, 30),  # Quarta
-            (4, '08:00', '21:30', 1, 30),  # Quinta
-            (5, '08:00', '21:30', 1, 30),  # Sexta
-            (6, '08:00', '21:30', 1, 30),  # Sábado
+            (0, '09:00', '20:00', 1, 30),  # Domingo
+            (1, '00:00', '00:00', 0, 30),  # Segunda - fechado
+            (2, '13:00', '20:00', 1, 30),  # Terça
+            (3, '13:00', '20:00', 1, 30),  # Quarta
+            (4, '13:00', '20:00', 1, 30),  # Quinta
+            (5, '13:00', '20:00', 1, 30),  # Sexta
+            (6, '09:00', '20:00', 1, 30),  # Sábado
         ]
         cursor.executemany(
             'INSERT INTO configuracao_horarios (dia_semana, abertura, fechamento, ativo, intervalo_corte_minutos) VALUES (%s, %s, %s, %s, %s)',

@@ -322,6 +322,7 @@ function abrirEditarServico(sJson) {
     document.getElementById('edit-servico-id').value = s.id;
     document.getElementById('novo-servico-nome').value = s.nome;
     document.getElementById('novo-servico-desc').value = s.descricao || '';
+    document.getElementById('novo-servico-tipo').value = s.tipo || 'principal';
     document.getElementById('novo-servico-duracao').value = s.duracao_minutos;
     document.getElementById('novo-servico-valor').value = s.valor;
     
@@ -329,6 +330,7 @@ function abrirEditarServico(sJson) {
     document.getElementById('btn-salvar-servico').textContent = 'Salvar Alterações';
     abrirModal('modal-novo-servico');
 }
+                
 
 async function salvarServico(event) {
     event.preventDefault();
@@ -336,6 +338,7 @@ async function salvarServico(event) {
     const id = document.getElementById('edit-servico-id').value;
     const nome = document.getElementById('novo-servico-nome').value.trim();
     const descricao = document.getElementById('novo-servico-desc').value.trim();
+    const tipo = document.getElementById('novo-servico-tipo').value;
     const duracao = parseInt(document.getElementById('novo-servico-duracao').value);
     const valor = parseFloat(document.getElementById('novo-servico-valor').value);
 
@@ -346,10 +349,10 @@ async function salvarServico(event) {
 
     try {
         if (id) {
-            await adminAtualizarServico(id, { nome, descricao, duracaoMinutos: duracao, valor });
+            await adminAtualizarServico(id, { nome, descricao, tipo, duracaoMinutos: duracao, valor });
             mostrarToast('✅ Serviço atualizado!', 'success');
         } else {
-            await adminCriarServico({ nome, descricao, duracaoMinutos: duracao, valor });
+            await adminCriarServico({ nome, descricao, tipo, duracaoMinutos: duracao, valor });
             mostrarToast('✅ Serviço criado!', 'success');
         }
         fecharModal('modal-novo-servico');
@@ -358,6 +361,7 @@ async function salvarServico(event) {
         mostrarToast(err.message, 'error');
     }
 }
+                
 
 async function desativarServico(id) {
     if (!confirm('Desativar este serviço?')) return;

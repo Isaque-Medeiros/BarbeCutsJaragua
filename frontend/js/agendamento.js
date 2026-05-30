@@ -6,7 +6,9 @@
  */
 
 let servicos = [];
+let servicosAdicionais = [];
 let servicoSelecionado = null;
+let adicionaisSelecionados = [];
 let dataSelecionada = null;
 let slotSelecionado = null;
 let ultimoAgendamento = null;
@@ -52,7 +54,10 @@ function setupHamburger() {
 async function carregarServicos() {
     try {
         const data = await listarServicos();
-        servicos = data.servicos;
+        // Separar serviços principais dos adicionais
+        servicos = data.servicos.filter(s => s.tipo !== 'adicional');
+        servicosAdicionais = data.servicos.filter(s => s.tipo === 'adicional');
+        
         const container = document.getElementById('servicos-selecao');
         container.innerHTML = '';
 
@@ -94,7 +99,57 @@ function selecionarServico(id) {
     // Avançar para step 2
     irParaStep(2);
     carregarSlots();
+    renderizarAdicionais();
 }
+
+function renderizarAdicionais() {
+    const container = document.getElementById('adicionais-container');
+    if (!container) return;
+    
+    container.innerHTML = '';
+
+    if (servicosAdicionais.length === 0) {
+        container.innerHTML = '<p class="text-secondary" style="font-size: 0.9rem;">Nenhum adicional disponível no momento.</p>';
+        return;
+    }
+
+    servicosAdicionais.forEach(s => {
+        const card = document.createElement('div');
+        card.className = 'service-card service-card-sm';
+        card.dataset.id = s.id;
+        
+        const isSelected = adicionaisSelecionados.includes(s.id);
+        if (isSelected) {
+            card.classList.add('selected');
+        }
+        
+        card.onclick = () => toggleAdicional(s.id);
+        card.innerHTML = `
+            <div class="service-icon" style="font-size: 1.2rem;">✨</div>
+            <div class="service-name" style="font-size: 0.9rem;">${s.nome}</div>
+            <div class="service-footer">
+                <span class="service-price" style="font-size: 0.85rem;">R$ ${parseFloat(s.valor).toFixed(2)}</span>
+                <span class="service-duration" style="font-size: 0.75rem;">⏱ ${s.duracao_minutos} min</span>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+function toggleAdicional(id) {
+    const index = adicionaisSelecionados.indexOf(id);
+    if (index === -1) {
+        adicionaisSelecionados.push(id);
+    } else {
+        adicionaisSelecionados.splice(index, 1);
+    }
+    
+    // Atualizar visual
+    document.querySelectorAll('#adicionais-container .service-card').forEach(c => {
+        c.classList.toggle('selected', adicionaisSelecionados.includes(parseInt(c.dataset.id)));
+    });
+}
+                
 
 // ===================== STEP 2: DATA E HORÁRIO =====================
 
@@ -207,7 +262,35 @@ function preencherResumo() {
     document.getElementById('resumo-servico').textContent = servicoSelecionado.nome;
     document.getElementById('resumo-data').textContent = formatarDataBR(dataSelecionada);
     document.getElementById('resumo-horario').textContent = `${slotSelecionado.horaInicio} às ${slotSelecionado.horaFim}`;
-    document.getElementById('resumo-valor').textContent = formatarMoeda(servicoSelecionado.valor);
+    
+    // Calcular valor total com adicionais
+    let valorTotal = parseFloat(servicoSelecionado.valor);
+    let adicionaisTexto = '';
+    
+    adicionaisSelecionados.forEach(addId => {
+        const addServico = servicosAdicionais.find(s => s.id === addId);
+        if (addServico) {
+            valorTotal += parseFloat(addServico.valor);
+            adicionaisTexto += ` + ${addServico.nome}`;
+        }
+    });
+    
+    document.getElementById('resumo-valor').textContent = formatarMoeda(valorTotal);
+    
+    // Mostrar adicionais selecionados no resumo
+    const adicionaisResumo = document.getElementById('resumo-adicionais');
+    if (adicionaisResumo) {
+        if (adicionaisSelecionados.length > 0) {
+            const nomes = adicionaisSelecionados.map(addId => {
+                const s = servicosAdicionais.find(serv => serv.id === addId);
+                return s ? s.nome : '';
+            }).filter(Boolean).join(', ');
+            adicionaisResumo.textContent = nomes;
+            adicionaisResumo.closest('.resumo-row').classList.remove('hidden');
+        } else {
+            adicionaisResumo.closest('.resumo-row').classList.add('hidden');
+        }
+    }
 }
 
 async function confirmarAgendamento(event) {
@@ -235,7 +318,8 @@ async function confirmarAgendamento(event) {
             servicoId: servicoSelecionado.id,
             dataHoraInicio: dataHoraInicio,
             notaOpcional: nota,
-            telefoneContato: telefone
+            telefoneContato: telefone,
+            servicosAdicionais: adicionaisSelecionados.join(',')
         });
 
         ultimoAgendamento = result.agendamento;

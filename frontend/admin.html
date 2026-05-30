@@ -147,6 +147,13 @@
                     <label class="form-label">Descrição</label>
                     <input type="text" id="novo-servico-desc" class="form-input">
                 </div>
+                <div class="form-group">
+                    <label class="form-label">Tipo</label>
+                    <select id="novo-servico-tipo" class="form-select">
+                        <option value="principal">Principal</option>
+                        <option value="adicional">Adicional (pode ser adicionado a qualquer serviço)</option>
+                    </select>
+                </div>
                 <div class="grid grid-2">
                     <div class="form-group">
                         <label class="form-label">Duração (min)</label>
@@ -157,6 +164,7 @@
                         <input type="number" id="novo-servico-valor" class="form-input" required step="0.01" min="0" value="35">
                     </div>
                 </div>
+                
                 <button type="submit" id="btn-salvar-servico" class="btn btn-primary btn-block">Criar Serviço</button>
             </form>
         </div>

@@ -87,6 +87,14 @@ async function consultarAgendamento(hash) {
     return apiGet(`/api/agendamentos/consulta?hash=${hash}`);
 }
 
+async function buscarAgendamentosPorTelefone(telefone) {
+    return apiGet(`/api/agendamentos/busca?telefone=${encodeURIComponent(telefone)}`);
+}
+
+async function cancelarAgendamentoCliente(hashId) {
+    return apiPost(`/api/agendamentos/${hashId}/cancelar`, {});
+}
+
 async function getConfigHorarios() {
     return apiGet('/api/config/horarios');
 }

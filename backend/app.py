@@ -237,17 +237,34 @@ def criar_agendamento():
     data_hora_inicio = dados.get('dataHoraInicio', '')
     nota_opcional = dados.get('notaOpcional', '').strip()
     telefone_contato = dados.get('telefoneContato', '').strip()
+    servicos_adicionais = dados.get('servicosAdicionais', '').strip()
 
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Buscar serviço
+    # Buscar serviço principal
     cursor.execute('SELECT * FROM servicos WHERE id = %s AND ativo = 1', (servico_id,))
     servico = cursor.fetchone()
     if not servico:
         conn.close()
         return jsonify({'erro': 'Serviço não encontrado.'}), 404
     servico = dict(servico)
+
+    # Calcular duração e valor total considerando serviços adicionais
+    duracao_total_min = servico['duracao_minutos']
+    valor_total = servico['valor']
+    servicos_adicionais_nomes = []
+
+    if servicos_adicionais:
+        adicionais_ids = [int(x.strip()) for x in servicos_adicionais.split(',') if x.strip()]
+        for add_id in adicionais_ids:
+            cursor.execute('SELECT * FROM servicos WHERE id = %s AND ativo = 1', (add_id,))
+            add_servico = cursor.fetchone()
+            if add_servico:
+                add_servico = dict(add_servico)
+                duracao_total_min += add_servico['duracao_minutos']
+                valor_total += add_servico['valor']
+                servicos_adicionais_nomes.append(add_servico['nome'])
 
     # Descobrir dia da semana
     try:
@@ -267,9 +284,9 @@ def criar_agendamento():
 
     # Calcular data_hora_fim
     buffer = config_horario['intervalo_corte_minutos'] if config_horario else 30
-    duracao_total = servico['duracao_minutos'] + buffer
+    duracao_total_com_buffer = duracao_total_min + buffer
     dt_inicio = datetime.fromisoformat(data_hora_inicio)
-    dt_fim = dt_inicio + timedelta(minutes=duracao_total)
+    dt_fim = dt_inicio + timedelta(minutes=duracao_total_com_buffer)
     data_hora_fim = dt_fim.isoformat()
 
     # Buscar agendamentos conflitantes
@@ -290,7 +307,7 @@ def criar_agendamento():
         cliente_nome=cliente_nome,
         data_hora_inicio=data_hora_inicio,
         servico_id=servico_id,
-        servico_duracao=servico['duracao_minutos'],
+        servico_duracao=duracao_total_min,
         servico_buffer=buffer,
         config_horario=config_horario,
         agendamentos_conflitantes=conflitantes,
@@ -308,12 +325,12 @@ def criar_agendamento():
 
     cursor.execute('''
         INSERT INTO agendamentos
-        (id, hash_id, cliente_nome, servico_id, valor_pago, valor_original,
+        (id, hash_id, cliente_nome, servico_id, servicos_adicionais, valor_pago, valor_original,
          data_hora_inicio, data_hora_fim, status, nota_opcional,
          telefone_contato, created_at, updated_at)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     ''', (
-        ag_id, hash_id, cliente_nome, servico_id, 0, servico['valor'],
+        ag_id, hash_id, cliente_nome, servico_id, servicos_adicionais, 0, valor_total,
         data_hora_inicio, data_hora_fim, 'agendado', nota_opcional,
         telefone_contato, agora, agora
     ))
@@ -326,13 +343,18 @@ def criar_agendamento():
     hora_inicio = formatar_hora_br(data_hora_inicio)
     hora_fim = formatar_hora_br(data_hora_fim)
 
+    # Nome do serviço para exibição
+    servico_nome_exibicao = servico['nome']
+    if servicos_adicionais_nomes:
+        servico_nome_exibicao += ' + ' + ', '.join(servicos_adicionais_nomes)
+
     mensagem = formatar_mensagem_whatsapp(
         cliente_nome=cliente_nome,
         data=data_br,
         hora_inicio=hora_inicio,
         hora_fim=hora_fim,
-        servico_nome=servico['nome'],
-        valor=servico['valor'],
+        servico_nome=servico_nome_exibicao,
+        valor=valor_total,
         nota_opcional=nota_opcional,
         url_site=SITE_URL
     )
@@ -346,11 +368,12 @@ def criar_agendamento():
         'agendamento': {
             'hashId': hash_id,
             'clienteNome': cliente_nome,
-            'servico': servico['nome'],
+            'servico': servico_nome_exibicao,
             'servicoId': servico_id,
+            'servicosAdicionais': servicos_adicionais,
             'dataHoraInicio': data_hora_inicio,
             'dataHoraFim': data_hora_fim,
-            'valor': servico['valor'],
+            'valor': valor_total,
             'status': 'agendado',
             'notaOpcional': nota_opcional,
             'mensagemWhatsApp': mensagem,
@@ -393,9 +416,91 @@ def consultar_agendamento():
             'valorPago': ag['valor_pago'],
             'status': ag['status'],
             'notaOpcional': ag['nota_opcional'],
+            'telefoneContato': ag['telefone_contato'],
             'createdAt': ag['created_at']
         }
     })
+
+
+@app.route('/api/agendamentos/busca', methods=['GET'])
+def buscar_agendamentos_por_telefone():
+    """
+    Busca agendamentos pelo número de telefone.
+    Query params: telefone
+    """
+    telefone = request.args.get('telefone', '').strip()
+
+    if not telefone:
+        return jsonify({'erro': 'Número de telefone é obrigatório.'}), 400
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT a.*, s.nome as servico_nome, s.duracao_minutos
+        FROM agendamentos a
+        JOIN servicos s ON a.servico_id = s.id
+        WHERE a.telefone_contato LIKE %s
+        ORDER BY a.data_hora_inicio DESC
+    ''', (f'%{telefone}%',))
+    agendamentos = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+
+    if not agendamentos:
+        return jsonify({'erro': 'Nenhum agendamento encontrado para este telefone.'}), 404
+
+    resultado = []
+    for ag in agendamentos:
+        resultado.append({
+            'hashId': ag['hash_id'],
+            'clienteNome': ag['cliente_nome'],
+            'servico': ag['servico_nome'],
+            'dataHoraInicio': ag['data_hora_inicio'],
+            'dataHoraFim': ag['data_hora_fim'],
+            'valor': ag['valor_original'],
+            'valorPago': ag['valor_pago'],
+            'status': ag['status'],
+            'notaOpcional': ag['nota_opcional'],
+            'telefoneContato': ag['telefone_contato'],
+            'createdAt': ag['created_at']
+        })
+
+    return jsonify({'agendamentos': resultado})
+
+
+@app.route('/api/agendamentos/<hash_id>/cancelar', methods=['POST'])
+def cancelar_agendamento_cliente(hash_id):
+    """
+    Cancela um agendamento pelo hash ID (para o cliente).
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT * FROM agendamentos WHERE hash_id = %s', (hash_id,))
+    agendamento = cursor.fetchone()
+
+    if not agendamento:
+        conn.close()
+        return jsonify({'erro': 'Agendamento não encontrado.'}), 404
+
+    ag = dict(agendamento)
+
+    if ag['status'] == 'cancelado':
+        conn.close()
+        return jsonify({'erro': 'Este agendamento já está cancelado.'}), 400
+
+    if ag['status'] == 'concluido':
+        conn.close()
+        return jsonify({'erro': 'Não é possível cancelar um agendamento já concluído.'}), 400
+
+    cursor.execute(
+        'UPDATE agendamentos SET status = %s, updated_at = %s WHERE hash_id = %s',
+        ('cancelado', datetime.now().isoformat(), hash_id)
+    )
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'mensagem': 'Agendamento cancelado com sucesso.'})
 
 
 @app.route('/api/config/horarios', methods=['GET'])
@@ -453,7 +558,6 @@ def admin_listar_agendamentos():
         where = "WHERE a.data_hora_inicio >= %s AND a.data_hora_inicio <= %s"
         params = [f"{data_inicio}T00:00:00", f"{data_fim}T23:59:59"]
     else:
-        # 'todos' ou qualquer outro valor - sem filtro de data
         where = ""
         params = []
 
@@ -639,6 +743,7 @@ def admin_criar_servico():
     duracao = dados.get('duracaoMinutos')
     valor = dados.get('valor')
     descricao = dados.get('descricao', '').strip()
+    tipo = dados.get('tipo', 'principal')
 
     if not nome or not duracao or valor is None:
         return jsonify({'erro': 'Nome, duração e valor são obrigatórios.'}), 400
@@ -646,12 +751,11 @@ def admin_criar_servico():
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        'INSERT INTO servicos (nome, descricao, duracao_minutos, valor) VALUES (%s, %s, %s, %s)',
-        (nome, descricao, duracao, valor)
+        'INSERT INTO servicos (nome, descricao, duracao_minutos, valor, tipo) VALUES (%s, %s, %s, %s, %s)',
+        (nome, descricao, duracao, valor, tipo)
     )
     conn.commit()
 
-    # Obter o ID do serviço inserido (compatível com PostgreSQL e SQLite)
     if is_postgres():
         cursor.execute('SELECT LASTVAL() as id')
         servico_id = cursor.fetchone()['id']
@@ -694,6 +798,9 @@ def admin_atualizar_servico(servico_id):
     if 'ativo' in dados:
         updates.append('ativo = %s')
         params.append(1 if dados['ativo'] else 0)
+    if 'tipo' in dados:
+        updates.append('tipo = %s')
+        params.append(dados['tipo'])
 
     if not updates:
         conn.close()
@@ -815,14 +922,14 @@ def admin_criar_bloqueio():
 
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute(
-        'INSERT INTO bloqueios (id, data, data_fim, hora_inicio, hora_fim, motivo) VALUES (%s, %s, %s, %s, %s, %s)',
-        (bl_id, data, data_fim, hora_inicio, hora_fim, motivo)
-    )
+    cursor.execute('''
+        INSERT INTO bloqueios (id, data, data_fim, hora_inicio, hora_fim, motivo)
+        VALUES (%s, %s, %s, %s, %s, %s)
+    ''', (bl_id, data, data_fim, hora_inicio, hora_fim, motivo))
     conn.commit()
     conn.close()
 
-    return jsonify({'success': True, 'bloqueio': {'id': bl_id}}), 201
+    return jsonify({'success': True, 'id': bl_id}), 201
 
 
 @app.route('/api/admin/bloqueios/<bl_id>', methods=['DELETE'])
@@ -847,19 +954,20 @@ def admin_remover_bloqueio(bl_id):
 
 # ===================== INICIALIZAÇÃO =====================
 
-# Inicializar banco ao importar (para gunicorn)
-print('[INFO] Inicializando banco de dados...')
-init_db()
-seed_default_data()
-print('[OK] Sistema BarbeCity Jaraguá iniciado!')
+@app.before_request
+def inicializar():
+    """Inicializa o banco de dados na primeira requisição."""
+    global _db_initialized
+    if not _db_initialized:
+        init_db()
+        seed_default_data()
+        _db_initialized = True
+
 
 if __name__ == '__main__':
-    import sys
-    import io
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-    port = int(os.environ.get('PORT', 5000))
-    debug = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'
-    print(f'[OK] Servidor rodando em http://0.0.0.0:{port}')
-    print(f'[OK] Painel admin: http://localhost:{port}/admin')
-    print(f'[OK] Agendamento: http://localhost:{port}/agendamento')
-    app.run(host='0.0.0.0', port=port, debug=debug)
+    # Inicializar banco de dados
+    init_db()
+    seed_default_data()
+    print('✅ Servidor iniciado!')
+    print(f'📍 URL: http://localhost:5000')
+    app.run(host='0.0.0.0', port=5000, debug=True)
