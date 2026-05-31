@@ -23,6 +23,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (form) {
         form.addEventListener('submit', confirmarAgendamento);
     }
+
+    // Formatação automática do telefone
+    const telefoneInput = document.getElementById('telefoneContato');
+    if (telefoneInput) {
+        telefoneInput.addEventListener('input', formatarTelefone);
+    }
 });
 
 // ===================== HAMBURGER MENU =====================
@@ -49,16 +55,40 @@ function setupHamburger() {
     });
 }
 
+// ===================== FORMATAÇÃO DE TELEFONE =====================
+
+function formatarTelefone(e) {
+    let valor = e.target.value.replace(/\D/g, '');
+    
+    if (valor.length > 11) {
+        valor = valor.slice(0, 11);
+    }
+    
+    if (valor.length > 7) {
+        valor = `(${valor.slice(0, 2)}) ${valor.slice(2, 7)}-${valor.slice(7)}`;
+    } else if (valor.length > 2) {
+        valor = `(${valor.slice(0, 2)}) ${valor.slice(2)}`;
+    } else if (valor.length > 0) {
+        valor = `(${valor}`;
+    }
+    
+    e.target.value = valor;
+}
+
 // ===================== STEP 1: SERVIÇOS =====================
 
 async function carregarServicos() {
     try {
         const data = await listarServicos();
-        // Serviços principais (exclui os que são apenas adicionais como Corte+Luzes e Corte+Botox)
-        // Mas inclui Luzes e Botox que podem ser selecionados sozinhos OU como adicional
-        servicos = data.servicos.filter(s => s.tipo !== 'adicional');
-        // Serviços que podem ser adicionais (Luzes, Botox)
+        // Serviços principais (cortes individuais)
+        const cortes = data.servicos.filter(s => s.tipo === 'principal');
+        // Serviços adicionais (Botox, Luzes)
         servicosAdicionais = data.servicos.filter(s => s.tipo === 'adicional');
+        // Combos
+        const combos = data.servicos.filter(s => s.tipo === 'combo');
+        
+        // Todos os serviços selecionáveis (cortes + combos)
+        servicos = [...cortes, ...combos];
         
         const container = document.getElementById('servicos-selecao');
         container.innerHTML = '';
@@ -68,40 +98,103 @@ async function carregarServicos() {
             return;
         }
 
-        servicos.forEach(s => {
-            const card = document.createElement('div');
-            card.className = 'service-card';
-            card.dataset.id = s.id;
-            card.onclick = () => selecionarServico(s.id);
+        // Seção de Cortes
+        if (cortes.length > 0) {
+            const secaoCortes = document.createElement('div');
+            secaoCortes.className = 'secao-servicos';
+            secaoCortes.innerHTML = '<h3 class="secao-titulo">✂️ Cortes</h3><div class="grid grid-2 grid-servicos"></div>';
+            const gridCortes = secaoCortes.querySelector('.grid-servicos');
             
-            // Escolher ícone baseado no nome do serviço
-            let icone = '✂️';
-            const nomeLower = s.nome.toLowerCase();
-            if (nomeLower.includes('barba')) icone = '🪒';
-            else if (nomeLower.includes('sobrancelha')) icone = '✨';
-            else if (nomeLower.includes('luzes')) icone = '💡';
-            else if (nomeLower.includes('botox')) icone = '💉';
-            else if (nomeLower.includes('combo')) icone = '🔥';
+            cortes.forEach(s => {
+                gridCortes.appendChild(criarCardServico(s));
+            });
             
-            card.innerHTML = `
-                <div class="service-icon">${icone}</div>
-                <div class="service-name">${s.nome}</div>
-                <div class="service-desc">${s.descricao || 'Serviço profissional'}</div>
-                <div class="service-footer">
-                    <span class="service-price">R$ ${parseFloat(s.valor).toFixed(2)}</span>
-                    <span class="service-duration">⏱ ${s.duracao_minutos} min</span>
-                </div>
-            `;
-            container.appendChild(card);
-        });
+            container.appendChild(secaoCortes);
+        }
+
+        // Seção de Adicionais (selecionáveis sozinhos)
+        if (servicosAdicionais.length > 0) {
+            const secaoAdicionais = document.createElement('div');
+            secaoAdicionais.className = 'secao-servicos';
+            secaoAdicionais.innerHTML = '<h3 class="secao-titulo">✨ Adicionais</h3><div class="grid grid-2 grid-servicos"></div>';
+            const gridAdicionais = secaoAdicionais.querySelector('.grid-servicos');
+            
+            servicosAdicionais.forEach(s => {
+                gridAdicionais.appendChild(criarCardServico(s));
+            });
+            
+            container.appendChild(secaoAdicionais);
+        }
+
+        // Seção de Combos
+        if (combos.length > 0) {
+            const secaoCombos = document.createElement('div');
+            secaoCombos.className = 'secao-servicos';
+            secaoCombos.innerHTML = '<h3 class="secao-titulo">🔥 Combos</h3><div class="grid grid-2 grid-servicos"></div>';
+            const gridCombos = secaoCombos.querySelector('.grid-servicos');
+            
+            combos.forEach(s => {
+                gridCombos.appendChild(criarCardServico(s));
+            });
+            
+            container.appendChild(secaoCombos);
+        }
     } catch (err) {
         document.getElementById('servicos-selecao').innerHTML =
             `<p class="text-danger" style="text-align: center;">Erro: ${err.message}</p>`;
     }
 }
 
+function criarCardServico(s) {
+    const card = document.createElement('div');
+    card.className = 'service-card';
+    card.dataset.id = s.id;
+    card.onclick = () => selecionarServico(s.id);
+    
+    // Escolher ícone baseado no nome/tipo do serviço
+    let icone = getIconeServico(s);
+    
+    card.innerHTML = `
+        <div class="service-icon">${icone}</div>
+        <div class="service-name">${s.nome}</div>
+        <div class="service-desc">${s.descricao || 'Serviço profissional'}</div>
+        <div class="service-footer">
+            <span class="service-price">R$ ${parseFloat(s.valor).toFixed(2)}</span>
+            <span class="service-duration">⏱ ${s.duracao_minutos} min</span>
+        </div>
+    `;
+    return card;
+}
+
+function getIconeServico(s) {
+    const nomeLower = s.nome.toLowerCase();
+    const tipo = s.tipo;
+    
+    if (tipo === 'combo') return '🔥';
+    if (tipo === 'adicional') {
+        if (nomeLower.includes('botox')) return '💉';
+        if (nomeLower.includes('luzes')) return '💡';
+        return '✨';
+    }
+    
+    // Cortes principais
+    if (nomeLower.includes('corte') && nomeLower.includes('barba')) return '✂️';
+    if (nomeLower.includes('corte')) return '✂️';
+    if (nomeLower.includes('barba')) return '🪒';
+    if (nomeLower.includes('sobrancelha')) return '✨';
+    
+    return '✂️';
+}
+
 function selecionarServico(id) {
-    servicoSelecionado = servicos.find(s => s.id === id);
+    // Verificar se é um serviço adicional selecionado como principal
+    const servicoAdd = servicosAdicionais.find(s => s.id === id);
+    if (servicoAdd) {
+        servicoSelecionado = servicoAdd;
+    } else {
+        servicoSelecionado = servicos.find(s => s.id === id);
+    }
+    
     if (!servicoSelecionado) return;
 
     // Destacar selecionado
@@ -120,12 +213,20 @@ function renderizarAdicionais() {
     
     container.innerHTML = '';
 
-    if (servicosAdicionais.length === 0) {
-        container.innerHTML = '<p class="text-secondary" style="font-size: 0.9rem;">Nenhum adicional disponível no momento.</p>';
+    // Se o serviço selecionado já é um adicional (Botox ou Luzes),
+    // remover ele da lista de adicionais disponíveis
+    let adicionaisDisponiveis = [...servicosAdicionais];
+    
+    if (servicoSelecionado && servicoSelecionado.tipo === 'adicional') {
+        adicionaisDisponiveis = adicionaisDisponiveis.filter(s => s.id !== servicoSelecionado.id);
+    }
+
+    if (adicionaisDisponiveis.length === 0) {
+        container.innerHTML = '<p class="text-secondary" style="font-size: 0.9rem;">Nenhum adicional disponível para este serviço.</p>';
         return;
     }
 
-    servicosAdicionais.forEach(s => {
+    adicionaisDisponiveis.forEach(s => {
         const card = document.createElement('div');
         card.className = 'service-card service-card-sm';
         card.dataset.id = s.id;
@@ -136,8 +237,14 @@ function renderizarAdicionais() {
         }
         
         card.onclick = () => toggleAdicional(s.id);
+        
+        let icone = '✨';
+        const nomeLower = s.nome.toLowerCase();
+        if (nomeLower.includes('botox')) icone = '💉';
+        if (nomeLower.includes('luzes')) icone = '💡';
+        
         card.innerHTML = `
-            <div class="service-icon" style="font-size: 1.2rem;">✨</div>
+            <div class="service-icon" style="font-size: 1.2rem;">${icone}</div>
             <div class="service-name" style="font-size: 0.9rem;">${s.nome}</div>
             <div class="service-footer">
                 <span class="service-price" style="font-size: 0.85rem;">R$ ${parseFloat(s.valor).toFixed(2)}</span>
@@ -314,6 +421,12 @@ async function confirmarAgendamento(event) {
 
     if (!nome) {
         mostrarToast('Por favor, digite seu nome.', 'error');
+        return;
+    }
+
+    if (!telefone) {
+        mostrarToast('Por favor, digite seu número de WhatsApp.', 'error');
+        document.getElementById('telefoneContato').focus();
         return;
     }
 

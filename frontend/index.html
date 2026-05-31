@@ -135,21 +135,53 @@
                     return;
                 }
 
-                data.servicos.forEach(s => {
-                    const card = document.createElement('div');
-                    card.className = 'service-card';
-                    card.style.cursor = 'default';
-                    card.innerHTML = `
-                        <div class="service-icon">✂️</div>
-                        <div class="service-name">${s.nome}</div>
-                        <div class="service-desc">${s.descricao || 'Serviço profissional com qualidade'}</div>
-                        <div class="service-footer">
-                            <span class="service-price">R$ ${parseFloat(s.valor).toFixed(2)}</span>
-                            <span class="service-duration">⏱ ${s.duracao_minutos} min</span>
-                        </div>
-                    `;
-                    container.appendChild(card);
-                });
+                function getIcone(s) {
+                    const nome = s.nome.toLowerCase();
+                    if (s.tipo === 'combo') return '🔥';
+                    if (s.tipo === 'adicional') {
+                        if (nome.includes('botox')) return '💉';
+                        if (nome.includes('luzes')) return '💡';
+                        return '✨';
+                    }
+                    if (nome.includes('corte')) return '✂️';
+                    if (nome.includes('barba')) return '🪒';
+                    if (nome.includes('sobrancelha')) return '✨';
+                    return '✂️';
+                }
+
+                function criarSecao(titulo, icone, servicosFiltrados) {
+                    if (servicosFiltrados.length === 0) return;
+                    const secao = document.createElement('div');
+                    secao.className = 'secao-servicos';
+                    secao.innerHTML = `<h3 class="secao-titulo">${icone} ${titulo}</h3><div class="grid grid-2 grid-servicos"></div>`;
+                    const grid = secao.querySelector('.grid-servicos');
+                    
+                    servicosFiltrados.forEach(s => {
+                        const card = document.createElement('div');
+                        card.className = 'service-card';
+                        card.style.cursor = 'default';
+                        card.innerHTML = `
+                            <div class="service-icon">${getIcone(s)}</div>
+                            <div class="service-name">${s.nome}</div>
+                            <div class="service-desc">${s.descricao || 'Serviço profissional com qualidade'}</div>
+                            <div class="service-footer">
+                                <span class="service-price">R$ ${parseFloat(s.valor).toFixed(2)}</span>
+                                <span class="service-duration">⏱ ${s.duracao_minutos} min</span>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    });
+                    
+                    container.appendChild(secao);
+                }
+
+                const cortes = data.servicos.filter(s => s.tipo === 'principal');
+                const adicionais = data.servicos.filter(s => s.tipo === 'adicional');
+                const combos = data.servicos.filter(s => s.tipo === 'combo');
+
+                criarSecao('Cortes', '✂️', cortes);
+                criarSecao('Adicionais', '✨', adicionais);
+                criarSecao('Combos', '🔥', combos);
             } catch (err) {
                 document.getElementById('servicos-list').innerHTML =
                     `<p class="text-danger" style="text-align: center;">Erro ao carregar serviços: ${err.message}</p>`;

@@ -281,17 +281,41 @@ def run_migrations():
         if 'tipo' not in colunas:
             cursor.execute("ALTER TABLE servicos ADD COLUMN tipo TEXT DEFAULT 'principal'")
 
+    # ===== Migration 1b: Garantir coluna servicos_adicionais no PostgreSQL =====
+    if is_postgres():
+        cursor.execute('''
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'agendamentos' AND column_name = 'servicos_adicionais'
+                ) THEN
+                    ALTER TABLE agendamentos ADD COLUMN servicos_adicionais TEXT DEFAULT '';
+                END IF;
+            END $$;
+        ''')
+    else:
+        cursor.execute("PRAGMA table_info(agendamentos)")
+        colunas_ag = [row[1] for row in cursor.fetchall()]
+        if 'servicos_adicionais' not in colunas_ag:
+            cursor.execute("ALTER TABLE agendamentos ADD COLUMN servicos_adicionais TEXT DEFAULT ''")
+
     # ===== Migration 2: Atualizar serviços existentes com os dados corretos =====
     # Lista completa de serviços que devem existir
+    # Organização: Cortes (principal), Adicionais, Combos
     servicos_correto = [
+        # Cortes individuais
         ('Corte', 'Corte tradicional com tesoura e máquina', 30, 35.00, 'principal'),
         ('Barba', 'Aparação e modelagem de barba', 20, 15.00, 'principal'),
-        ('Combo Corte + Barba', 'Corte social completo com barba', 50, 50.00, 'principal'),
         ('Sobrancelha', 'Design de sobrancelha', 15, 10.00, 'principal'),
-        ('Luzes', 'Luzes com técnica profissional', 70, 40.00, 'adicional'),
+        # Adicionais (podem ser selecionados sozinhos ou como adicional)
         ('Botox', 'Botox capilar', 40, 60.00, 'adicional'),
-        ('Corte + Luzes', 'Corte completo com luzes', 100, 75.00, 'principal'),
-        ('Corte + Botox', 'Corte completo com botox capilar', 70, 90.00, 'principal'),
+        ('Luzes', 'Luzes com técnica profissional', 70, 40.00, 'adicional'),
+        # Combos
+        ('Barba + Corte', 'Barba completa com corte social', 50, 50.00, 'combo'),
+        ('Barba + Sobrancelha', 'Barba com design de sobrancelha', 35, 25.00, 'combo'),
+        ('Corte + Sobrancelha', 'Corte com design de sobrancelha', 45, 45.00, 'combo'),
+        ('Corte + Barba + Sobrancelha', 'Corte completo, barba e sobrancelha', 65, 60.00, 'combo'),
     ]
 
     for nome, desc, duracao, valor, tipo in servicos_correto:
@@ -311,6 +335,14 @@ def run_migrations():
                 INSERT INTO servicos (nome, descricao, duracao_minutos, valor, tipo, ativo)
                 VALUES (%s, %s, %s, %s, %s, 1)
             ''', (nome, desc, duracao, valor, tipo))
+
+    # Desativar serviços antigos que não estão mais na lista
+    nomes_atuais = [s[0] for s in servicos_correto]
+    cursor.execute('SELECT nome FROM servicos WHERE ativo = 1')
+    for row in cursor.fetchall():
+        nome_existente = row['nome'] if isinstance(row, dict) else row[0]
+        if nome_existente not in nomes_atuais:
+            cursor.execute('UPDATE servicos SET ativo = 0 WHERE nome = %s', (nome_existente,))
 
     # ===== Migration 3: Atualizar intervalo_corte_minutos para 15 =====
     cursor.execute('''
