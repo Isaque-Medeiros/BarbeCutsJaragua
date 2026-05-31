@@ -1550,6 +1550,60 @@ tr:hover td {
 .grid-servicos {
     display: grid;
     gap: 0.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+/* ============================================================
+   HORÁRIO PERSONALIZADO
+   ============================================================ */
+.horario-personalizado-wrapper {
+    margin: 0.75rem 0;
+    padding: 0.75rem;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+
+.horario-personalizado-wrapper .form-input {
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 1.2rem;
+    letter-spacing: 3px;
+}
+
+.horario-personalizado-wrapper .form-input.error {
+    border-color: var(--danger);
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.15);
+}
+
+.horario-personalizado-wrapper .form-input.success {
+    border-color: var(--success);
+    box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.15);
+}
+
+.horario-personalizado-wrapper .form-hint {
+    margin-top: 0.5rem;
+    text-align: center;
+    font-size: 0.8rem;
+}
+
+/* ============================================================
+   WHATSAPP SCREEN (Tela intermediária obrigatória)
+   ============================================================ */
+#whatsapp-screen .card {
+    text-align: center;
+}
+
+#whatsapp-screen .btn-whatsapp {
+    font-size: 1.1rem;
+    padding: 1rem 1.5rem;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.4); }
+    70% { box-shadow: 0 0 0 15px rgba(37, 211, 102, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
 }
 
 /* ============================================================

@@ -71,7 +71,7 @@
                         <div class="card-header">
                             <span class="card-title">💇‍♂️ Escolha o Serviço</span>
                         </div>
-                        <div id="servicos-selecao" class="grid grid-2" style="margin-top: 0.5rem;">
+                        <div id="servicos-selecao" class="grid grid-servicos" style="margin-top: 0.5rem;">
                             <div class="loading"><div class="spinner"></div></div>
                         </div>
                     </div>
@@ -164,6 +164,47 @@
                     </div>
                 </div>
 
+                <!-- Tela WhatsApp Obrigatório -->
+                <div id="whatsapp-screen" class="hidden">
+                    <div class="card" style="text-align: center;">
+                        <div class="check-animated" style="font-size: 3rem; margin-bottom: 1rem;">📲</div>
+                        <h2>Quase lá! Envie o comprovante</h2>
+                        <p class="text-secondary" style="margin-bottom: 1.5rem;">
+                            Para confirmar seu agendamento, <strong>envie o comprovante no WhatsApp</strong> clicando no botão abaixo.
+                        </p>
+
+                        <div class="resumo-card" style="margin-bottom: 1.5rem; text-align: left;">
+                            <div class="resumo-row">
+                                <span class="resumo-label">Cliente</span>
+                                <span class="resumo-value" id="whatsapp-cliente">—</span>
+                            </div>
+                            <div class="resumo-row">
+                                <span class="resumo-label">Data</span>
+                                <span class="resumo-value" id="whatsapp-data">—</span>
+                            </div>
+                            <div class="resumo-row">
+                                <span class="resumo-label">Horário</span>
+                                <span class="resumo-value" id="whatsapp-horario">—</span>
+                            </div>
+                            <div class="resumo-row">
+                                <span class="resumo-label">Serviço</span>
+                                <span class="resumo-value" id="whatsapp-servico">—</span>
+                            </div>
+                            <div class="resumo-row">
+                                <span class="resumo-label">Valor</span>
+                                <span class="resumo-total" id="whatsapp-valor">—</span>
+                            </div>
+                        </div>
+
+                        <a id="btn-enviar-whatsapp" href="#" target="_blank" class="btn btn-whatsapp btn-lg btn-block" style="margin-bottom: 1rem;">
+                            📲 Enviar Comprovante no WhatsApp
+                        </a>
+                        <p class="text-secondary" style="font-size: 0.85rem;">
+                            ⚠️ O agendamento só será confirmado após o envio do comprovante.
+                        </p>
+                    </div>
+                </div>
+
                 <!-- Step 4: Sucesso / Ticket -->
                 <div id="step-4-content" class="hidden">
                     <div class="card" style="text-align: center;">
@@ -221,7 +262,7 @@
                         </div>
 
                         <p style="margin-top: 1.5rem; font-size: 0.85rem; color: var(--text-muted);">
-                            ⚠️ Para cancelar, entre em contato pelo WhatsApp: <a href="https://wa.me/5511972244484" target="_blank">(11) 97224-4484</a>
+                            ⚠️ Para cancelar, entre em contato pelo WhatsApp: <a href="https://wa.me/5511915040871" target="_blank">(11) 91504-0871</a>
                         </p>
                     </div>
                 </div>

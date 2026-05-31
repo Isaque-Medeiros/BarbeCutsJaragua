@@ -75,7 +75,7 @@ def handle_404(e):
 # Configurações
 ADMIN_SECRET = os.environ.get('ADMIN_SECRET', 'admbarber1904')
 SITE_URL = os.environ.get('SITE_URL', 'http://localhost:5000')
-WHATSAPP_NUMBER = os.environ.get('WHATSAPP_NUMBER', '5511972244484')
+WHATSAPP_NUMBER = os.environ.get('WHATSAPP_NUMBER', '5511915040871')
 BARBEARIA_NOME = os.environ.get('BARBEARIA_NOME', 'Barbearia do Seu Zé')
 
 # Caminho para o frontend
