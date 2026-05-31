@@ -93,8 +93,8 @@ def calcular_slots_disponiveis(
     abertura_min = time_to_minutes(abertura)
     fechamento_min = time_to_minutes(fechamento)
 
-    # Intervalo entre inícios de slots: 15 minutos
-    INTERVALO_SLOTS = 15
+    # Intervalo entre inícios de slots: 5 minutos
+    INTERVALO_SLOTS = 5
 
     # O serviço deve caber dentro do horário de funcionamento
     # O slot termina quando o serviço acaba (sem contar o buffer)
