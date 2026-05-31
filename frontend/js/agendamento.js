@@ -332,42 +332,81 @@ function validarHorarioPersonalizado() {
         return;
     }
 
-    // Verificar se o horário está disponível
     const horarioStr = `${String(hora).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-    const slotEncontrado = slotsDisponiveis.find(s => s.horaInicio === horarioStr);
+    const horarioMin = hora * 60 + min;
 
-    if (slotEncontrado) {
-        status.textContent = '✅ Horário disponível! Clique para selecionar.';
-        status.className = 'form-hint text-success';
-        input.classList.add('success');
-        input.classList.remove('error');
-        
-        // Auto-selecionar o slot
-        selecionarSlot(slotEncontrado.horaInicio, slotEncontrado.horaFim);
-    } else {
-        // Verificar se está dentro do horário de funcionamento
-        const horarioMin = hora * 60 + min;
-        const primeiroSlot = slotsDisponiveis.length > 0 ? slotsDisponiveis[0] : null;
-        const ultimoSlot = slotsDisponiveis.length > 0 ? slotsDisponiveis[slotsDisponiveis.length - 1] : null;
-        
-        if (primeiroSlot && ultimoSlot) {
-            const inicioMin = parseInt(primeiroSlot.horaInicio.split(':')[0]) * 60 + parseInt(primeiroSlot.horaInicio.split(':')[1]);
-            const fimMin = parseInt(ultimoSlot.horaInicio.split(':')[0]) * 60 + parseInt(ultimoSlot.horaInicio.split(':')[1]);
-            
-            if (horarioMin < inicioMin) {
-                status.textContent = `❌ Antes do horário de funcionamento (após ${primeiroSlot.horaInicio})`;
-            } else if (horarioMin > fimMin) {
-                status.textContent = `❌ Após o horário de funcionamento (até ${ultimoSlot.horaInicio})`;
-            } else {
-                status.textContent = '❌ Horário indisponível (já agendado ou conflitante)';
-            }
-        } else {
-            status.textContent = '❌ Horário indisponível';
-        }
+    // Verificar se está dentro do horário de funcionamento
+    const primeiroSlot = slotsDisponiveis.length > 0 ? slotsDisponiveis[0] : null;
+    const ultimoSlot = slotsDisponiveis.length > 0 ? slotsDisponiveis[slotsDisponiveis.length - 1] : null;
+    
+    if (!primeiroSlot || !ultimoSlot) {
+        status.textContent = '❌ Nenhum horário disponível hoje';
         status.className = 'form-hint text-danger';
         input.classList.add('error');
         input.classList.remove('success');
+        return;
     }
+
+    const inicioMin = parseInt(primeiroSlot.horaInicio.split(':')[0]) * 60 + parseInt(primeiroSlot.horaInicio.split(':')[1]);
+    const fimMin = parseInt(ultimoSlot.horaFim.split(':')[0]) * 60 + parseInt(ultimoSlot.horaFim.split(':')[1]);
+
+    if (horarioMin < inicioMin) {
+        status.textContent = `❌ Antes do horário de funcionamento (abre ${primeiroSlot.horaInicio})`;
+        status.className = 'form-hint text-danger';
+        input.classList.add('error');
+        input.classList.remove('success');
+        return;
+    }
+
+    // Duração do serviço selecionado
+    const duracaoServico = servicoSelecionado ? servicoSelecionado.duracao_minutos : 30;
+    const horarioFimMin = horarioMin + duracaoServico;
+
+    if (horarioFimMin > fimMin) {
+        status.textContent = `❌ Serviço não cabe no horário (terminaria após ${minutesToTime(horarioFimMin)})`;
+        status.className = 'form-hint text-danger';
+        input.classList.add('error');
+        input.classList.remove('success');
+        return;
+    }
+
+    // Verificar conflito com slots existentes (já agendados)
+    // Um slot está ocupado se o horário solicitado conflita com ele
+    const conflitante = slotsDisponiveis.some(s => {
+        const sInicio = timeStrToMinutes(s.horaInicio);
+        const sFim = timeStrToMinutes(s.horaFim);
+        // Conflito se: inicio < fim_agendamento E fim > inicio_agendamento
+        return horarioMin < sFim && horarioFimMin > sInicio;
+    });
+
+    if (conflitante) {
+        status.textContent = '❌ Horário conflitante com outro agendamento';
+        status.className = 'form-hint text-danger';
+        input.classList.add('error');
+        input.classList.remove('success');
+        return;
+    }
+
+    // Horário válido e disponível!
+    status.textContent = '✅ Horário disponível!';
+    status.className = 'form-hint text-success';
+    input.classList.add('success');
+    input.classList.remove('error');
+    
+    // Calcular hora fim baseada na duração do serviço
+    const horaFimStr = minutesToTime(horarioFimMin);
+    selecionarSlot(horarioStr, horaFimStr);
+}
+
+function timeStrToMinutes(t) {
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+}
+
+function minutesToTime(min) {
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
 function selecionarSlot(horaInicio, horaFim) {
