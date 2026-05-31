@@ -1553,15 +1553,24 @@ tr:hover td {
     grid-template-columns: 1fr;
 }
 
-/* Desktop: 3 colunas para cortes, 2 para adicionais, 3 para combos */
+/* Desktop: mesma largura máxima do celular, centralizado */
 @media (min-width: 769px) {
     .grid-servicos {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: 1fr;
+        max-width: 500px;
+        margin: 0 auto;
     }
     
-    /* Adicionais em 2 colunas no desktop */
-    .secao-servicos:nth-child(2) .grid-servicos {
-        grid-template-columns: repeat(2, 1fr);
+    .secao-servicos {
+        max-width: 500px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    .secao-titulo {
+        max-width: 500px;
+        margin-left: auto;
+        margin-right: auto;
     }
 }
 

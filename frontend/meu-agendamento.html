@@ -130,7 +130,7 @@
     </section>
 
     <!-- Modal de Confirmação de Cancelamento -->
-    <div id="cancel-modal" class="modal-overlay hidden">
+    <div id="cancel-modal" class="modal-overlay">
         <div class="modal">
             <div class="modal-header">
                 <span class="modal-title">❌ Cancelar Agendamento</span>
@@ -356,11 +356,11 @@
 
         function cancelarAgendamento() {
             if (!hashAtual) return;
-            document.getElementById('cancel-modal').classList.remove('hidden');
+            document.getElementById('cancel-modal').classList.add('active');
         }
 
         function fecharModal() {
-            document.getElementById('cancel-modal').classList.add('hidden');
+            document.getElementById('cancel-modal').classList.remove('active');
         }
 
         async function confirmarCancelamento() {
