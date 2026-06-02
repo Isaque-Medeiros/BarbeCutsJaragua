@@ -2828,6 +2828,21 @@ tr:hover td {
     font-size: 0.9rem;
 }
 
+.img-container-centered {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+.img-container-centered img {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+    height: auto;
+}
+
 .contact-map {
     border-radius: var(--radius-xl);
     overflow: hidden;

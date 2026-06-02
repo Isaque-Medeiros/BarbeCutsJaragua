@@ -418,7 +418,7 @@
                 }
                 var principais = servicos.filter(function(s) { return s.tipo === 'principal' || !s.tipo; });
                 var adicionais = servicos.filter(function(s) { return s.tipo === 'adicional'; });
-                var inativos = servicos.filter(function(s) { return s.ativo === false; });
+                var inativos = servicos.filter(function(s) { return s.ativo == 0; });
                 var html = '';
                 if (principais.length > 0) {
                     html += '<h4 class="servico-categoria">💈 Serviços Principais</h4>';
@@ -441,11 +441,11 @@
         function criarServicoCard(s) {
             return '<div class="servico-card">' +
                 '<div class="meta"><div class="info">' +
-                '<strong>' + (s.nome || '') + '</strong> ' + (s.ativo !== false ? '<span class="badge badge-success">Ativo</span>' : '<span class="badge badge-danger">Inativo</span>') +
+                '<strong>' + (s.nome || '') + '</strong> ' + (s.ativo == 1 ? '<span class="badge badge-success">Ativo</span>' : '<span class="badge badge-danger">Inativo</span>') +
                 '<div style="font-size:0.85rem;color:var(--muted);">' + (s.descricao || '') + ' — ' + (s.duracao_minutos || 0) + 'min — R$ ' + parseFloat(s.valor || 0).toFixed(2) + ' — ' + (s.tipo || 'principal') + '</div>' +
                 '</div><div class="actions">' +
                 '<button class="btn btn-sm btn-gold" onclick="editarServico(' + s.id + ')">✏️</button>' +
-                (s.ativo !== false ? '<button class="btn btn-sm btn-danger" onclick="desativarServico(' + s.id + ')">🗑️</button>' : '<button class="btn btn-sm btn-success" onclick="reativarServico(' + s.id + ')">🔄</button><button class="btn btn-sm" style="background:var(--danger);color:#fff;border:none;" onclick="excluirServicoPermanentemente(' + s.id + ')">❌ Excluir</button>') +
+                (s.ativo == 1 ? '<button class="btn btn-sm btn-danger" onclick="desativarServico(' + s.id + ')">🗑️</button>' : '<button class="btn btn-sm btn-success" onclick="reativarServico(' + s.id + ')">🔄</button><button class="btn btn-sm" style="background:var(--danger);color:#fff;border:none;" onclick="excluirServicoPermanentemente(' + s.id + ')">❌ Excluir</button>') +
                 '</div></div></div>';
         }
 
@@ -545,7 +545,7 @@
                     div.innerHTML = '<p class="text-muted">Nenhuma configuração encontrada.</p>';
                     return;
                 }
-                var dias = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+                var dias = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'];
                 div.innerHTML = '<h4 style="margin-bottom:1rem;">📅 Horários de Funcionamento</h4>' +
                     '<p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">Clique em 🟢/🔴 para ativar/desativar. Edite os horários e clique em 💾 para salvar.</p>';
                 var html = '<div style="display:grid;gap:0.5rem;">';

@@ -993,7 +993,7 @@ def admin_criar_servico():
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        'INSERT INTO servicos (nome, descricao, duracao_minutos, valor, tipo) VALUES (%s, %s, %s, %s, %s)',
+        'INSERT INTO servicos (nome, descricao, duracao_minutos, valor, tipo, ativo) VALUES (%s, %s, %s, %s, %s, 1)',
         (nome, descricao, duracao, valor, tipo)
     )
     conn.commit()
