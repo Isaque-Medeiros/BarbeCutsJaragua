@@ -208,7 +208,8 @@ def buscar_horarios():
         servico_buffer=config_horario['intervalo_corte_minutos'],
         config_horario=config_horario,
         agendamentos_existentes=agendamentos,
-        bloqueios=bloqueios
+        bloqueios=bloqueios,
+        agora=datetime.now()
     )
 
     return jsonify({
@@ -361,7 +362,7 @@ def criar_agendamento():
 
     # URL do WhatsApp
     import urllib.parse
-    whatsapp_url = f"https://wa.me/5511915040871?text={urllib.parse.quote(mensagem)}"
+    whatsapp_url = f"https://wa.me/{WHATSAPP_NUMBER}?text={urllib.parse.quote(mensagem)}"
 
     return jsonify({
         'success': True,

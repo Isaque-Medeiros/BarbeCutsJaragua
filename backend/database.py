@@ -305,16 +305,16 @@ def run_migrations():
     # Organização: Cortes (principal), Adicionais, Combos
     servicos_correto = [
         # Cortes individuais
-        ('Corte', 'Corte tradicional com tesoura e máquina', 30, 35.00, 'principal'),
-        ('Barba', 'Aparação e modelagem de barba', 20, 15.00, 'principal'),
+        ('Corte', 'Corte tradicional com tesoura e máquina', 30, 30.00, 'principal'),
+        ('Barba', 'Aparação e modelagem de barba', 20, 20.00, 'principal'),
         ('Sobrancelha', 'Design de sobrancelha', 15, 10.00, 'principal'),
         # Adicionais (podem ser selecionados sozinhos ou como adicional)
-        ('Botox', 'Botox capilar', 40, 60.00, 'adicional'),
-        ('Luzes', 'Luzes com técnica profissional', 70, 40.00, 'adicional'),
+        ('Botox', 'Botox capilar', 40, 50.00, 'adicional'),
+        ('Luzes', 'Luzes com técnica profissional', 70, 60.00, 'adicional'),
         # Combos
         ('Barba + Corte', 'Barba completa com corte social', 50, 50.00, 'combo'),
-        ('Barba + Sobrancelha', 'Barba com design de sobrancelha', 35, 25.00, 'combo'),
-        ('Corte + Sobrancelha', 'Corte com design de sobrancelha', 45, 45.00, 'combo'),
+        ('Barba + Sobrancelha', 'Barba com design de sobrancelha', 35, 30.00, 'combo'),
+        ('Corte + Sobrancelha', 'Corte com design de sobrancelha', 45, 40.00, 'combo'),
         ('Corte + Barba + Sobrancelha', 'Corte completo, barba e sobrancelha', 65, 60.00, 'combo'),
     ]
 
@@ -355,12 +355,12 @@ def run_migrations():
     # ATENÇÃO: datetime.weekday() retorna: 0=Segunda, 1=Terça, ..., 5=Sábado, 6=Domingo
     horarios_padrao = [
         (0, '00:00', '00:00', 0),  # Segunda - fechado
-        (1, '13:00', '20:00', 1),  # Terça
-        (2, '13:00', '20:00', 1),  # Quarta
-        (3, '13:00', '20:00', 1),  # Quinta
-        (4, '13:00', '20:00', 1),  # Sexta
-        (5, '09:00', '20:00', 1),  # Sábado
-        (6, '09:00', '20:00', 1),  # Domingo
+        (1, '13:00', '20:15', 1),  # Terça
+        (2, '13:00', '20:15', 1),  # Quarta
+        (3, '13:00', '20:15', 1),  # Quinta
+        (4, '13:00', '20:15', 1),  # Sexta
+        (5, '09:00', '20:15', 1),  # Sábado
+        (6, '09:00', '20:15', 1),  # Domingo
     ]
 
     for dia_semana, abertura, fechamento, ativo in horarios_padrao:

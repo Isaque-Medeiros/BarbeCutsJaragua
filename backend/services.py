@@ -61,15 +61,17 @@ def calcular_slots_disponiveis(
     servico_buffer: int,
     config_horario: dict,
     agendamentos_existentes: list,
-    bloqueios: list
+    bloqueios: list,
+    agora: Optional[datetime] = None
 ) -> list:
     """
     Calcula os slots disponíveis para uma determinada data e serviço.
     
-    Gera slots a cada 15 minutos de intervalo, garantindo que:
+    Gera slots a cada 5 minutos de intervalo, garantindo que:
     - O horário de início + duração do serviço não ultrapasse o fechamento
     - Não haja conflito com agendamentos já existentes
     - Não haja conflito com bloqueios
+    - Slots já passados (antes do horário atual) sejam removidos
 
     Args:
         data: Data no formato 'YYYY-MM-DD'
@@ -79,6 +81,7 @@ def calcular_slots_disponiveis(
         config_horario: Dict com 'abertura', 'fechamento', 'ativo'
         agendamentos_existentes: Lista de agendamentos já marcados
         bloqueios: Lista de bloqueios para a data
+        agora: Data/hora atual (se None, usa datetime.now())
 
     Returns:
         Lista de slots disponíveis
@@ -100,11 +103,30 @@ def calcular_slots_disponiveis(
     # O slot termina quando o serviço acaba (sem contar o buffer)
     ultimo_inicio_valido = fechamento_min - servico_duracao
 
+    # Determinar o horário atual em minutos
+    if agora is None:
+        agora = datetime.now()
+    
+    hoje_str = agora.strftime('%Y-%m-%d')
+    minutos_agora = agora.hour * 60 + agora.minute
+    
+    # Se a data consultada é HOJE, ignorar slots que já passaram
+    # (considerando uma margem de 30min para preparação)
+    MARGEM_MINUTOS = 30
+    minutos_corte = 0
+    if data == hoje_str:
+        minutos_corte = minutos_agora + MARGEM_MINUTOS
+
     slots = []
 
-    # Gerar slots brutos a cada 15 minutos
+    # Gerar slots brutos a cada 5 minutos
     hora_atual = abertura_min
     while hora_atual <= ultimo_inicio_valido:
+        # Pular slots que já passaram do horário atual (se for hoje)
+        if minutos_corte > 0 and hora_atual < minutos_corte:
+            hora_atual += INTERVALO_SLOTS
+            continue
+
         # O fim do slot é apenas o fim do serviço (sem buffer)
         hora_fim_servico = hora_atual + servico_duracao
         # O fim do slot com buffer (para conflitos)
