@@ -362,7 +362,7 @@ def criar_agendamento():
 
     # URL do WhatsApp
     import urllib.parse
-    whatsapp_url = f"https://wa.me/{WHATSAPP_NUMBER}?text={urllib.parse.quote(mensagem)}"
+    whatsapp_url = f"https://wa.me/55915040871?text={urllib.parse.quote(mensagem)}"
 
     return jsonify({
         'success': True,
