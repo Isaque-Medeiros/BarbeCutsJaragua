@@ -99,6 +99,14 @@ async function getConfigHorarios() {
     return apiGet('/api/config/horarios');
 }
 
+async function listarDatasDisponiveis() {
+    return apiGet('/api/horarios/datas');
+}
+
+async function listarSlots(data, servicoId, duracao) {
+    return apiGet(`/api/horarios/slots?data=${data}&servicoId=${servicoId}&duracao=${duracao}`);
+}
+
 // Admin
 async function adminListarAgendamentos(periodo = 'hoje', dataInicio = '', dataFim = '') {
     let url = `/api/admin/agendamentos?periodo=${periodo}`;

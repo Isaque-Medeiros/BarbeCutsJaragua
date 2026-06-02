@@ -225,6 +225,117 @@ def buscar_horarios():
     })
 
 
+@app.route('/api/horarios/datas', methods=['GET'])
+def listar_datas_disponiveis():
+    """
+    Retorna as datas disponíveis para agendamento (próximos 14 dias).
+    """
+    hoje = date.today()
+    datas = []
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    for i in range(14):
+        dt = hoje + timedelta(days=i)
+        dia_semana = dt.weekday()
+        
+        cursor.execute(
+            'SELECT ativo FROM configuracao_horarios WHERE dia_semana = %s',
+            (dia_semana,)
+        )
+        config = cursor.fetchone()
+        
+        if config and config['ativo']:
+            datas.append({
+                'data': dt.isoformat(),
+                'diaSemana': dia_semana
+            })
+
+    conn.close()
+    return jsonify({'datas': datas})
+
+
+@app.route('/api/horarios/slots', methods=['GET'])
+def listar_slots():
+    """
+    Retorna os slots disponíveis para uma data e serviço.
+    Query params: data (YYYY-MM-DD), servicoId, duracao (opcional, minutos)
+    """
+    data_str = request.args.get('data', '')
+    servico_id = request.args.get('servicoId', type=int)
+    duracao_personalizada = request.args.get('duracao', type=int)
+
+    if not data_str or not servico_id:
+        return jsonify({'erro': 'Parâmetros data e servicoId são obrigatórios.'}), 400
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Buscar serviço
+    cursor.execute('SELECT * FROM servicos WHERE id = %s AND ativo = 1', (servico_id,))
+    servico = cursor.fetchone()
+    if not servico:
+        conn.close()
+        return jsonify({'erro': 'Serviço não encontrado.'}), 404
+    servico = dict(servico)
+
+    # Usar duração personalizada se fornecida, senão a do serviço
+    duracao = duracao_personalizada if duracao_personalizada else servico['duracao_minutos']
+
+    # Descobrir dia da semana
+    try:
+        dt = datetime.strptime(data_str, '%Y-%m-%d')
+        dia_semana = dt.weekday()
+    except:
+        conn.close()
+        return jsonify({'erro': 'Formato de data inválido. Use YYYY-MM-DD.'}), 400
+
+    # Buscar configuração de horário
+    cursor.execute(
+        'SELECT * FROM configuracao_horarios WHERE dia_semana = %s',
+        (dia_semana,)
+    )
+    config_horario = cursor.fetchone()
+    config_horario = dict(config_horario) if config_horario else None
+
+    if not config_horario or not config_horario.get('ativo'):
+        conn.close()
+        return jsonify({'slots': [], 'data': data_str})
+
+    # Buscar agendamentos existentes para a data
+    data_inicio = f"{data_str}T00:00:00"
+    data_fim = f"{data_str}T23:59:59"
+    cursor.execute(
+        'SELECT * FROM agendamentos WHERE data_hora_inicio >= %s AND data_hora_inicio <= %s',
+        (data_inicio, data_fim)
+    )
+    agendamentos = [dict(row) for row in cursor.fetchall()]
+
+    # Buscar bloqueios
+    cursor.execute('''
+        SELECT * FROM bloqueios 
+        WHERE data = %s 
+           OR (data_fim IS NOT NULL AND data_fim != '' AND %s BETWEEN data AND data_fim)
+    ''', (data_str, data_str))
+    bloqueios = [dict(row) for row in cursor.fetchall()]
+
+    conn.close()
+
+    # Calcular slots
+    slots = calcular_slots_disponiveis(
+        data=data_str,
+        servico_id=servico_id,
+        servico_duracao=duracao,
+        servico_buffer=config_horario['intervalo_corte_minutos'],
+        config_horario=config_horario,
+        agendamentos_existentes=agendamentos,
+        bloqueios=bloqueios,
+        agora=datetime.now()
+    )
+
+    return jsonify({'slots': slots, 'data': data_str})
+
+
 @app.route('/api/agendamentos', methods=['POST'])
 def criar_agendamento():
     """Cria um novo agendamento."""
@@ -362,7 +473,7 @@ def criar_agendamento():
 
     # URL do WhatsApp
     import urllib.parse
-    whatsapp_url = f"https://wa.me/5511915040871?text={urllib.parse.quote(mensagem)}"
+    whatsapp_url = f"https://wa.me/{WHATSAPP_NUMBER}?text={urllib.parse.quote(mensagem)}"
 
     return jsonify({
         'success': True,
