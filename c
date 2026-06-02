@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meu Agendamento — BarbeCuts Jaraguá</title>
-    <meta name="description" content="Consulte ou cancele seu agendamento na BarbeCuts Jaraguá pelo código ou telefone.">
+    <title>Meu Agendamento — Barbe City Jaraguá</title>
+    <meta name="description" content="Consulte ou cancele seu agendamento na Barbe City Jaraguá pelo código ou telefone.">
     <link rel="stylesheet" href="/css/style.css">
     <link rel="icon" href="/img/logo.jpeg" type="image/jpeg">
 </head>
