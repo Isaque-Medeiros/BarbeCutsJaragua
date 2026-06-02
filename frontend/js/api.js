@@ -6,7 +6,7 @@
 
 const API_BASE = '';
 
-const ADMIN_SECRET = localStorage.getItem('admin_secret') || '';
+let ADMIN_SECRET = localStorage.getItem('admin_secret') || '';
 
 function setAdminSecret(secret) {
     localStorage.setItem('admin_secret', secret);
