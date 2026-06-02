@@ -143,8 +143,14 @@
 
         // ========== LOGIN ==========
         function loginAdmin() {
-            var secret = document.getElementById('admin-secret-input').value;
-            ADMIN_SECRET = secret;
+            var secret = document.getElementById('admin-secret-input').value.trim();
+            if (!secret) {
+                mostrarToast('Digite a senha.', 'error');
+                return;
+            }
+            // Persistir o secret no localStorage via api.js e também na variável global
+            setAdminSecret(secret);
+            window.ADMIN_SECRET = secret;
             document.getElementById('login-error').classList.add('hidden');
             fetch('/api/admin/agendamentos?periodo=hoje', {
                 headers: { 'x-admin-secret': secret }
@@ -155,14 +161,18 @@
                 document.getElementById('login-overlay').classList.add('hidden');
                 document.getElementById('admin-app').classList.remove('hidden');
                 initAdmin();
+                mostrarToast('✅ Login realizado!', 'success');
             }).catch(function(e) {
-                ADMIN_SECRET = '';
+                localStorage.removeItem('admin_secret');
+                window.ADMIN_SECRET = '';
                 document.getElementById('login-error').classList.remove('hidden');
+                mostrarToast('❌ Senha incorreta!', 'error');
             });
         }
 
         function logoutAdmin() {
-            ADMIN_SECRET = '';
+            localStorage.removeItem('admin_secret');
+            window.ADMIN_SECRET = '';
             document.getElementById('admin-app').classList.add('hidden');
             document.getElementById('login-overlay').classList.remove('hidden');
             document.getElementById('admin-secret-input').value = '';
@@ -187,7 +197,7 @@
             return '/api/admin' + path + (query ? '?' + query : '');
         }
         function apiHeaders() {
-            return { 'Content-Type': 'application/json', 'x-admin-secret': ADMIN_SECRET };
+            return { 'Content-Type': 'application/json', 'x-admin-secret': localStorage.getItem('admin_secret') || '' };
         }
 
         // ========== AGENDAMENTOS ==========

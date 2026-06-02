@@ -3333,3 +3333,248 @@ tr:hover td {
     .mobile-overlay { display: none !important; }
     .hero-logo { width: 220px; }
 }
+
+/* ============================================================
+   ADMIN — Painel Administrativo
+   ============================================================ */
+
+/* === Tela de Login === */
+.admin-login-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg-deep);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5000;
+    padding: 1rem;
+}
+
+.admin-login-card {
+    max-width: 400px;
+    width: 100%;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-gold);
+}
+
+.admin-login-card .card-header {
+    border-bottom-color: var(--border-gold);
+}
+
+/* === Admin Tabs === */
+.admin-tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 1.5rem;
+    background: var(--bg-elevated);
+    border-radius: var(--radius-lg);
+    padding: 0.35rem;
+    border: 1px solid var(--border);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.admin-tab {
+    flex: 1;
+    min-width: 0;
+    padding: 0.7rem 1rem;
+    border: none;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+}
+
+.admin-tab:hover {
+    color: var(--text-primary);
+    background: var(--bg-glass-hover);
+}
+
+.admin-tab.active {
+    background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
+    color: var(--bg-deep);
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(201, 168, 76, 0.3);
+}
+
+/* === Admin Tab Content === */
+.admin-tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.admin-tab-content.active {
+    display: block;
+}
+
+/* === Admin Cards (Agendamentos, Serviços, Config) === */
+.agendamento-card,
+.servico-card {
+    background: var(--bg-glass);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem;
+    margin-bottom: 0.65rem;
+    transition: var(--transition);
+}
+
+.agendamento-card:hover,
+.servico-card:hover {
+    border-color: var(--border-gold);
+    background: var(--bg-glass-hover);
+    transform: translateX(3px);
+}
+
+.agendamento-card .meta,
+.servico-card .meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.agendamento-card .info,
+.servico-card .info {
+    flex: 1;
+    min-width: 0;
+}
+
+.agendamento-card .actions,
+.servico-card .actions {
+    display: flex;
+    gap: 0.4rem;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.agendamento-card .actions .btn,
+.servico-card .actions .btn {
+    min-height: 36px;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.75rem;
+}
+
+/* === Admin Badge Colors === */
+.badge-success {
+    background: var(--success-bg) !important;
+    color: var(--success) !important;
+    border: 1px solid rgba(46, 204, 113, 0.2) !important;
+}
+
+.badge-danger {
+    background: var(--danger-bg) !important;
+    color: var(--danger) !important;
+    border: 1px solid rgba(231, 76, 60, 0.2) !important;
+}
+
+.badge-warning {
+    background: var(--warning-bg) !important;
+    color: var(--warning) !important;
+    border: 1px solid rgba(241, 196, 15, 0.2) !important;
+}
+
+/* === Botão Gold === */
+.btn-gold {
+    background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
+    color: var(--bg-deep);
+}
+
+.btn-gold:hover {
+    box-shadow: var(--glow-gold);
+    transform: translateY(-1px);
+    color: var(--bg-deep);
+}
+
+/* === Categoria Serviço === */
+.servico-categoria {
+    font-family: var(--font-display);
+    color: var(--brand-primary);
+    font-size: 1.05rem;
+    margin-bottom: 0.65rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--border);
+}
+
+/* === Toast Show/Hide for Admin === */
+.toast.show {
+    display: flex !important;
+}
+
+/* === Admin Image Section (centered) === */
+.gallery-section-image {
+    text-align: center;
+    padding: 1rem 0;
+}
+
+.gallery-section-image img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius-xl);
+    display: inline-block;
+    margin: 0 auto;
+}
+
+/* === Mobile: Admin === */
+@media (max-width: 600px) {
+    .admin-tabs {
+        gap: 0.15rem;
+        padding: 0.25rem;
+        border-radius: var(--radius);
+    }
+    .admin-tab {
+        padding: 0.55rem 0.5rem;
+        font-size: 0.75rem;
+    }
+    .agendamento-card .meta,
+    .servico-card .meta {
+        flex-direction: column;
+    }
+    .agendamento-card .actions,
+    .servico-card .actions {
+        width: 100%;
+        justify-content: flex-start;
+        padding-top: 0.5rem;
+        border-top: 1px solid var(--border);
+    }
+    .agendamento-card,
+    .servico-card {
+        padding: 0.85rem 1rem;
+    }
+    .admin-login-card {
+        max-width: 340px;
+    }
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+    .stat-card {
+        padding: 1rem 0.75rem;
+    }
+    .stat-card .stat-value {
+        font-size: 1.3rem;
+    }
+}
+
+@media (max-width: 400px) {
+    .admin-tab {
+        font-size: 0.7rem;
+        padding: 0.45rem 0.35rem;
+    }
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.35rem;
+    }
+}
