@@ -101,7 +101,7 @@
                     <div class="footer-brand-title">✂️ BarbeCuts Jaraguá</div>
                     <p class="footer-brand-desc">Tradição e estilo em cada corte.</p>
                     <div class="footer-social">
-                        <a href="https://wa.me/5511972244484" target="_blank">📱</a>
+                        <a href="https://wa.me/5511915040871" target="_blank">📱</a>
                         <a href="https://www.instagram.com" target="_blank">📷</a>
                     </div>
                 </div>
@@ -126,7 +126,7 @@
         </div>
     </footer>
 
-    <a href="https://wa.me/5511972244484" target="_blank" class="float-whatsapp">📱</a>
+    <a href="https://wa.me/5511915040871" target="_blank" class="float-whatsapp">📱</a>
 
     <script src="/js/api.js"></script>
     <script>

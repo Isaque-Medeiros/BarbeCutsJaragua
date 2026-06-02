@@ -143,7 +143,7 @@ Substituir emojis por ícones SVG consistentes:
 ├─────────────────────────────────────────────┤
 │  FOOTER                                      │
 │  ✂️ BarbeCity Jaraguá — "Deus é Fiel"        │
-│  📱 WhatsApp: (11) 97224-4484                │
+│  📱 WhatsApp: (11) 91504-0871                │
 └─────────────────────────────────────────────┘
 ```
 

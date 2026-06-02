@@ -355,12 +355,12 @@ def run_migrations():
     # ATENÇÃO: datetime.weekday() retorna: 0=Segunda, 1=Terça, ..., 5=Sábado, 6=Domingo
     horarios_padrao = [
         (0, '00:00', '00:00', 0),  # Segunda - fechado
-        (1, '13:00', '20:20', 1),  # Terça
-        (2, '13:00', '20:20', 1),  # Quarta
-        (3, '13:00', '20:20', 1),  # Quinta
-        (4, '13:00', '20:20', 1),  # Sexta
-        (5, '09:00', '20:20', 1),  # Sábado
-        (6, '09:00', '20:20', 1),  # Domingo
+        (1, '13:00', '20:50', 1),  # Terça
+        (2, '13:00', '20:50', 1),  # Quarta
+        (3, '13:00', '20:50', 1),  # Quinta
+        (4, '13:00', '20:50', 1),  # Sexta
+        (5, '09:00', '20:50', 1),  # Sábado
+        (6, '09:00', '20:50', 1),  # Domingo
     ]
 
     for dia_semana, abertura, fechamento, ativo in horarios_padrao:
