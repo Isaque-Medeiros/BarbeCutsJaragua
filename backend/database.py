@@ -336,14 +336,8 @@ def run_migrations():
                 VALUES (%s, %s, %s, %s, %s, 1)
             ''', (nome, desc, duracao, valor, tipo))
 
-    # Desativar serviços antigos que não estão mais na lista
-    nomes_atuais = [s[0] for s in servicos_correto]
-    cursor.execute('SELECT nome FROM servicos WHERE ativo = 1')
-    for row in cursor.fetchall():
-        nome_existente = row['nome'] if isinstance(row, dict) else row[0]
-        if nome_existente not in nomes_atuais:
-            cursor.execute('UPDATE servicos SET ativo = 0 WHERE nome = %s', (nome_existente,))
-
+    # NOTA: Não desativamos mais serviços personalizados adicionados pelo admin.
+    # Apenas garantimos que os serviços padrão existem e estão ativos.
     # ===== Migration 3: Atualizar intervalo_corte_minutos para 15 =====
     cursor.execute('''
         UPDATE configuracao_horarios 

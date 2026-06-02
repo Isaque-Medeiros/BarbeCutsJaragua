@@ -19,7 +19,7 @@ from services import (
     gerar_hash_id, gerar_id, calcular_slots_disponiveis,
     validar_agendamento, calcular_resumo_financeiro,
     formatar_mensagem_whatsapp, formatar_data_br,
-    formatar_hora_br, time_to_minutes
+    formatar_hora_br, time_to_minutes, brasilia_now
 )
 
 app = Flask(__name__, static_folder=None)
@@ -209,7 +209,7 @@ def buscar_horarios():
         config_horario=config_horario,
         agendamentos_existentes=agendamentos,
         bloqueios=bloqueios,
-        agora=datetime.now()
+        agora=brasilia_now()
     )
 
     return jsonify({
@@ -330,7 +330,7 @@ def listar_slots():
         config_horario=config_horario,
         agendamentos_existentes=agendamentos,
         bloqueios=bloqueios,
-        agora=datetime.now()
+        agora=brasilia_now()
     )
 
     return jsonify({'slots': slots, 'data': data_str})
@@ -631,6 +631,52 @@ def get_config_horarios():
     return jsonify({'configHorarios': horarios})
 
 
+@app.route('/api/config/horarios/<int:dia_semana>', methods=['PUT'])
+def atualizar_config_horario(dia_semana):
+    """Atualiza a configuração de horário de um dia da semana."""
+    dados = request.get_json()
+    if not dados:
+        return jsonify({'erro': 'Dados são obrigatórios.'}), 400
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    updates = []
+    params = []
+
+    if 'abertura' in dados:
+        updates.append('abertura = %s')
+        params.append(dados['abertura'])
+    if 'fechamento' in dados:
+        updates.append('fechamento = %s')
+        params.append(dados['fechamento'])
+    if 'ativo' in dados:
+        updates.append('ativo = %s')
+        params.append(1 if dados['ativo'] else 0)
+    if 'intervalo_corte_minutos' in dados:
+        updates.append('intervalo_corte_minutos = %s')
+        params.append(dados['intervalo_corte_minutos'])
+
+    if not updates:
+        conn.close()
+        return jsonify({'erro': 'Nenhum campo para atualizar.'}), 400
+
+    params.append(dia_semana)
+    cursor.execute(
+        f'UPDATE configuracao_horarios SET {", ".join(updates)} WHERE dia_semana = %s',
+        params
+    )
+
+    if cursor.rowcount == 0:
+        conn.close()
+        return jsonify({'erro': 'Configuração não encontrada.'}), 404
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True})
+
+
 # ===================== ENDPOINTS ADMIN =====================
 
 def verificar_admin():
@@ -735,7 +781,10 @@ def admin_financeiro():
 
 @app.route('/api/admin/agendamentos/<ag_id>', methods=['PUT'])
 def admin_atualizar_agendamento(ag_id):
-    """Atualiza valor pago e/ou status de um agendamento."""
+    """Atualiza valor pago e/ou status de um agendamento.
+    
+    Aceita tanto id (UUID) quanto hash_id como identificador.
+    """
     if not verificar_admin():
         return jsonify({'erro': 'Não autorizado.'}), 401
 
@@ -767,12 +816,22 @@ def admin_atualizar_agendamento(ag_id):
 
     updates.append('updated_at = %s')
     params.append(datetime.now().isoformat())
-    params.append(ag_id)
+    # Não colocar ag_id ainda - vamos tentar id e hash_id separadamente
 
+    # Tentar primeiro pelo id
+    params_copy_id = params + [ag_id]
     cursor.execute(
         f'UPDATE agendamentos SET {", ".join(updates)} WHERE id = %s',
-        params
+        params_copy_id
     )
+
+    if cursor.rowcount == 0:
+        # Tentar pelo hash_id
+        params_copy_hash = params + [ag_id]
+        cursor.execute(
+            f'UPDATE agendamentos SET {", ".join(updates)} WHERE hash_id = %s',
+            params_copy_hash
+        )
 
     if cursor.rowcount == 0:
         conn.close()
@@ -782,6 +841,70 @@ def admin_atualizar_agendamento(ag_id):
     conn.close()
 
     return jsonify({'success': True})
+
+
+@app.route('/api/admin/agendamentos/batch', methods=['POST'])
+def admin_batch_atualizar():
+    """Atualiza status de múltiplos agendamentos de uma vez."""
+    if not verificar_admin():
+        return jsonify({'erro': 'Não autorizado.'}), 401
+
+    dados = request.get_json()
+    if not dados:
+        return jsonify({'erro': 'Dados são obrigatórios.'}), 400
+
+    ids = dados.get('ids', [])
+    novo_status = dados.get('status', '')
+
+    if not ids or not novo_status:
+        return jsonify({'erro': 'ids e status são obrigatórios.'}), 400
+
+    status_validos = ['agendado', 'concluido', 'cancelado', 'ausente']
+    if novo_status not in status_validos:
+        return jsonify({'erro': f'Status inválido. Use: {", ".join(status_validos)}'}), 400
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    agora = datetime.now().isoformat()
+
+    atualizados = 0
+    for ag_id in ids:
+        # Tentar por id
+        cursor.execute(
+            'UPDATE agendamentos SET status = %s, updated_at = %s WHERE id = %s',
+            (novo_status, agora, ag_id)
+        )
+        if cursor.rowcount == 0:
+            # Tentar por hash_id
+            cursor.execute(
+                'UPDATE agendamentos SET status = %s, updated_at = %s WHERE hash_id = %s',
+                (novo_status, agora, ag_id)
+            )
+        atualizados += cursor.rowcount
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'atualizados': atualizados})
+
+
+@app.route('/api/admin/agendamentos/limpar/<status>', methods=['DELETE'])
+def admin_limpar_por_status(status):
+    """Remove todos os agendamentos com o status especificado (cancelado ou concluido)."""
+    if not verificar_admin():
+        return jsonify({'erro': 'Não autorizado.'}), 401
+
+    if status not in ('cancelado', 'concluido'):
+        return jsonify({'erro': 'Status deve ser cancelado ou concluido.'}), 400
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM agendamentos WHERE status = %s', (status,))
+    count = cursor.rowcount
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'removidos': count})
 
 
 @app.route('/api/admin/agendamentos/cancelados', methods=['DELETE'])
@@ -813,6 +936,13 @@ def admin_cancelar_agendamento(ag_id):
         'UPDATE agendamentos SET status = %s, updated_at = %s WHERE id = %s',
         ('cancelado', datetime.now().isoformat(), ag_id)
     )
+
+    if cursor.rowcount == 0:
+        # Tentar por hash_id
+        cursor.execute(
+            'UPDATE agendamentos SET status = %s, updated_at = %s WHERE hash_id = %s',
+            ('cancelado', datetime.now().isoformat(), ag_id)
+        )
 
     if cursor.rowcount == 0:
         conn.close()

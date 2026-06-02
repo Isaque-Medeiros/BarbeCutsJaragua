@@ -4,11 +4,16 @@ services.py — Regras de Negócio
 Algoritmo de cálculo de slots disponíveis, validações e lógica financeira.
 """
 
-from datetime import datetime, timedelta, date, time
+from datetime import datetime, timedelta, date, time, timezone
 from typing import Optional
 import uuid
 import hashlib
 import secrets
+
+
+def brasilia_now() -> datetime:
+    """Retorna o datetime atual no fuso horário de Brasília (UTC-3)."""
+    return datetime.now(timezone.utc) - timedelta(hours=3)
 
 
 def gerar_hash_id() -> str:
@@ -103,9 +108,9 @@ def calcular_slots_disponiveis(
     # O slot termina quando o serviço acaba (sem contar o buffer)
     ultimo_inicio_valido = fechamento_min - servico_duracao
 
-    # Determinar o horário atual em minutos
+    # Determinar o horário atual em minutos usando Brasília (UTC-3)
     if agora is None:
-        agora = datetime.now()
+        agora = brasilia_now()
     
     hoje_str = agora.strftime('%Y-%m-%d')
     minutos_agora = agora.hour * 60 + agora.minute
@@ -215,11 +220,11 @@ def validar_agendamento(
     if not config_horario or not config_horario.get('ativo'):
         return {'valido': False, 'erro': 'A barbearia está fechada neste dia.'}
 
-    # Validar horário mínimo (30 min a partir de agora)
+    # Validar horário mínimo (30 min a partir de agora, horário de Brasília)
     try:
         dt_inicio = datetime.fromisoformat(data_hora_inicio)
-        agora = datetime.now(dt_inicio.tzinfo) if dt_inicio.tzinfo else datetime.now()
-        if dt_inicio < agora + timedelta(minutes=30):
+        agora = brasilia_now()
+        if dt_inicio.replace(tzinfo=None) < agora + timedelta(minutes=30):
             return {'valido': False, 'erro': 'O agendamento deve ser com pelo menos 30 minutos de antecedência.'}
     except:
         return {'valido': False, 'erro': 'Formato de data/hora inválido.'}

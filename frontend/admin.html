@@ -56,11 +56,25 @@
 
                 <!-- TAB AGENDAMENTOS -->
                 <div class="admin-tab-content active" id="tab-agendamentos">
-                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem;">
                         <button class="admin-tab active" onclick="carregarAgendamentos('hoje',this)" data-periodo="hoje">📅 Hoje</button>
                         <button class="admin-tab" onclick="carregarAgendamentos('semana',this)" data-periodo="semana">📆 Semana</button>
                         <button class="admin-tab" onclick="carregarAgendamentos('mes',this)" data-periodo="mes">🗓️ Mês</button>
                         <button class="admin-tab" onclick="carregarAgendamentos('todos',this)" data-periodo="todos">📋 Todos</button>
+                    </div>
+                    <!-- Barra de ações em lote -->
+                    <div id="batch-actions" class="hidden" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;padding:0.5rem;background:var(--bg-glass);border-radius:var(--radius-md);align-items:center;">
+                        <span style="color:var(--text-muted);font-size:0.85rem;"><span id="selected-count">0</span> selecionado(s)</span>
+                        <button class="btn btn-sm btn-success" onclick="batchStatus('concluido')" style="font-size:0.8rem;">✅ Concluir</button>
+                        <button class="btn btn-sm" style="background:var(--brand-burgundy);color:#fff;border:none;font-size:0.8rem;" onclick="batchStatus('ausente')">❓ Ausente</button>
+                        <button class="btn btn-sm btn-danger" onclick="batchStatus('cancelado')" style="font-size:0.8rem;">❌ Cancelar</button>
+                        <button class="btn btn-sm" style="background:var(--brand-primary);color:#000;border:none;font-size:0.8rem;" onclick="batchRestituir()">↩️ Restituir</button>
+                        <button class="btn btn-sm" style="background:var(--text-muted);color:#fff;border:none;font-size:0.8rem;" onclick="limparSelecao()">✕ Limpar</button>
+                    </div>
+                    <!-- Botões de limpeza -->
+                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+                        <button class="btn btn-sm" style="background:var(--danger);color:#fff;border:none;font-size:0.8rem;" onclick="limparPorStatus('cancelado')">🗑️ Limpar Cancelados</button>
+                        <button class="btn btn-sm" style="background:var(--bg-elevated);color:var(--text-muted);border:1px solid var(--border);font-size:0.8rem;" onclick="limparPorStatus('concluido')">🗑️ Limpar Concluídos</button>
                     </div>
                     <div id="agendamentos-list"><p class="text-muted">Carregando...</p></div>
                 </div>
@@ -148,7 +162,6 @@
                 mostrarToast('Digite a senha.', 'error');
                 return;
             }
-            // Persistir o secret no localStorage via api.js e também na variável global
             setAdminSecret(secret);
             window.ADMIN_SECRET = secret;
             document.getElementById('login-error').classList.add('hidden');
@@ -200,12 +213,45 @@
             return { 'Content-Type': 'application/json', 'x-admin-secret': localStorage.getItem('admin_secret') || '' };
         }
 
+        // ========== VARIÁVEL DE SELEÇÃO ==========
+        var selecionados = {};
+
+        function atualizarContadorSelecao() {
+            var ids = Object.keys(selecionados);
+            var count = ids.length;
+            document.getElementById('selected-count').textContent = count;
+            var el = document.getElementById('batch-actions');
+            if (count > 0) {
+                el.classList.remove('hidden');
+            } else {
+                el.classList.add('hidden');
+            }
+        }
+
+        function toggleSelecao(id) {
+            if (selecionados[id]) {
+                delete selecionados[id];
+            } else {
+                selecionados[id] = true;
+            }
+            atualizarContadorSelecao();
+        }
+
+        function limparSelecao() {
+            selecionados = {};
+            atualizarContadorSelecao();
+            document.querySelectorAll('.agendamento-checkbox').forEach(function(cb) {
+                cb.checked = false;
+            });
+        }
+
         // ========== AGENDAMENTOS ==========
         function carregarAgendamentos(periodo, btn) {
             if (btn) {
                 document.querySelectorAll('#tab-agendamentos .admin-tab[data-periodo]').forEach(function(t) { t.classList.remove('active'); });
                 btn.classList.add('active');
             }
+            limparSelecao();
             var list = document.getElementById('agendamentos-list');
             list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
             fetch(apiUrl('/agendamentos', 'periodo=' + periodo), { headers: apiHeaders() })
@@ -226,8 +272,23 @@
                     var valor = a.valor_original || a.valor || 0;
                     var tel = a.telefone_contato || a.telefoneContato || '';
                     var nota = a.nota_opcional || a.notaOpcional || '';
+                    var botoes = '';
+                    if (status === 'agendado') {
+                        botoes = '<button class="btn btn-sm btn-success" onclick="atualizarStatus(\'' + id + '\',\'concluido\')">✅ Concluir</button>' +
+                                 '<button class="btn btn-sm" style="background:var(--brand-burgundy);color:#fff;border:none;" onclick="atualizarStatus(\'' + id + '\',\'ausente\')">❓ Ausente</button>' +
+                                 '<button class="btn btn-sm btn-danger" onclick="atualizarStatus(\'' + id + '\',\'cancelado\')">❌ Cancelar</button>';
+                    } else if (status === 'cancelado') {
+                        botoes = '<button class="btn btn-sm" style="background:var(--brand-primary);color:#000;border:none;" onclick="atualizarStatus(\'' + id + '\',\'agendado\')">↩️ Restituir</button>';
+                    } else if (status === 'ausente') {
+                        botoes = '<button class="btn btn-sm btn-success" onclick="atualizarStatus(\'' + id + '\',\'concluido\')">✅ Concluir</button>' +
+                                 '<button class="btn btn-sm btn-danger" onclick="atualizarStatus(\'' + id + '\',\'cancelado\')">❌ Cancelar</button>';
+                    } else if (status === 'concluido') {
+                        botoes = '<button class="btn btn-sm" style="background:var(--brand-primary);color:#000;border:none;" onclick="atualizarStatus(\'' + id + '\',\'agendado\')">↩️ Reabrir</button>';
+                    }
                     return '<div class="agendamento-card">' +
-                        '<div class="meta"><div class="info">' +
+                        '<div style="display:flex;align-items:flex-start;gap:0.5rem;">' +
+                        '<input type="checkbox" class="agendamento-checkbox" style="margin-top:0.3rem;accent-color:var(--brand-primary);" onchange="toggleSelecao(\'' + id + '\')">' +
+                        '<div class="meta" style="flex:1;"><div class="info">' +
                         '<strong>' + cliente + '</strong> <span class="badge ' + statusClass + '">' + status + '</span>' +
                         '<div style="font-size:0.85rem;color:var(--muted);margin-top:0.25rem;">' +
                         nomeServico + ' — ' + dt.toLocaleDateString('pt-BR') + ' às ' + dt.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) +
@@ -235,9 +296,7 @@
                         (tel ? '<br>📱 ' + tel : '') +
                         (nota ? '<br>📝 ' + nota : '') +
                         '</div></div>' +
-                        '<div class="actions">' +
-                        (status === 'agendado' ? '<button class="btn btn-sm btn-success" onclick="atualizarStatus(\'' + id + '\',\'concluido\')">✅ Concluir</button><button class="btn btn-sm btn-danger" onclick="atualizarStatus(\'' + id + '\',\'cancelado\')">❌ Cancelar</button>' : '') +
-                        '</div></div></div>';
+                        '<div class="actions">' + botoes + '</div></div></div></div>';
                 }).join('');
             }).catch(function(e) {
                 list.innerHTML = '<p class="text-danger">Erro ao carregar: ' + e.message + '</p>';
@@ -258,6 +317,70 @@
                     mostrarToast('Erro: ' + (d.erro || 'desconhecido'), 'error');
                 }
             }).catch(function(e) { mostrarToast('Erro na requisição', 'error'); });
+        }
+
+        // ========== AÇÕES EM LOTE ==========
+        function batchStatus(status) {
+            var ids = Object.keys(selecionados);
+            if (ids.length === 0) {
+                mostrarToast('Selecione pelo menos um agendamento.', 'error');
+                return;
+            }
+            if (!confirm('Alterar ' + ids.length + ' agendamento(s) para "' + status + '"?')) return;
+            fetch('/api/admin/agendamentos/batch', {
+                method: 'POST',
+                headers: apiHeaders(),
+                body: JSON.stringify({ ids: ids, status: status })
+            }).then(function(r) { return r.json(); }).then(function(d) {
+                if (d.success) {
+                    mostrarToast('✅ ' + d.atualizados + ' agendamento(s) atualizado(s)!', 'success');
+                    limparSelecao();
+                    var btnAtivo = document.querySelector('#tab-agendamentos .admin-tab.active[data-periodo]');
+                    carregarAgendamentos(btnAtivo ? btnAtivo.dataset.periodo : 'hoje', btnAtivo);
+                } else {
+                    mostrarToast('Erro: ' + (d.erro || 'desconhecido'), 'error');
+                }
+            }).catch(function() { mostrarToast('Erro na requisição em lote.', 'error'); });
+        }
+
+        function batchRestituir() {
+            var ids = Object.keys(selecionados);
+            if (ids.length === 0) {
+                mostrarToast('Selecione pelo menos um agendamento.', 'error');
+                return;
+            }
+            if (!confirm('Restituir ' + ids.length + ' agendamento(s) para "agendado"?')) return;
+            fetch('/api/admin/agendamentos/batch', {
+                method: 'POST',
+                headers: apiHeaders(),
+                body: JSON.stringify({ ids: ids, status: 'agendado' })
+            }).then(function(r) { return r.json(); }).then(function(d) {
+                if (d.success) {
+                    mostrarToast('✅ ' + d.atualizados + ' agendamento(s) restituído(s)!', 'success');
+                    limparSelecao();
+                    var btnAtivo = document.querySelector('#tab-agendamentos .admin-tab.active[data-periodo]');
+                    carregarAgendamentos(btnAtivo ? btnAtivo.dataset.periodo : 'hoje', btnAtivo);
+                } else {
+                    mostrarToast('Erro: ' + (d.erro || 'desconhecido'), 'error');
+                }
+            }).catch(function() { mostrarToast('Erro na requisição em lote.', 'error'); });
+        }
+
+        function limparPorStatus(status) {
+            var label = status === 'cancelado' ? 'cancelados' : 'concluídos';
+            if (!confirm('Tem certeza que deseja remover TODOS os agendamentos ' + label + '?')) return;
+            fetch('/api/admin/agendamentos/limpar/' + status, {
+                method: 'DELETE',
+                headers: apiHeaders()
+            }).then(function(r) { return r.json(); }).then(function(d) {
+                if (d.success) {
+                    mostrarToast('🗑️ ' + d.removidos + ' agendamento(s) removido(s)!', 'success');
+                    var btnAtivo = document.querySelector('#tab-agendamentos .admin-tab.active[data-periodo]');
+                    carregarAgendamentos(btnAtivo ? btnAtivo.dataset.periodo : 'hoje', btnAtivo);
+                } else {
+                    mostrarToast('Erro: ' + (d.erro || 'desconhecido'), 'error');
+                }
+            }).catch(function() { mostrarToast('Erro na requisição.', 'error'); });
         }
 
         // ========== FINANCEIRO ==========
@@ -295,6 +418,7 @@
                 }
                 var principais = servicos.filter(function(s) { return s.tipo === 'principal' || !s.tipo; });
                 var adicionais = servicos.filter(function(s) { return s.tipo === 'adicional'; });
+                var inativos = servicos.filter(function(s) { return s.ativo === false; });
                 var html = '';
                 if (principais.length > 0) {
                     html += '<h4 class="servico-categoria">💈 Serviços Principais</h4>';
@@ -303,6 +427,10 @@
                 if (adicionais.length > 0) {
                     html += '<h4 class="servico-categoria" style="margin-top:1.5rem;">🧴 Serviços Adicionais</h4>';
                     html += adicionais.map(function(s) { return criarServicoCard(s); }).join('');
+                }
+                if (inativos.length > 0) {
+                    html += '<h4 class="servico-categoria" style="margin-top:1.5rem;color:var(--danger);">⚠️ Serviços Inativos</h4>';
+                    html += inativos.map(function(s) { return criarServicoCard(s); }).join('');
                 }
                 list.innerHTML = html;
             }).catch(function() {
@@ -317,7 +445,7 @@
                 '<div style="font-size:0.85rem;color:var(--muted);">' + (s.descricao || '') + ' — ' + (s.duracao_minutos || 0) + 'min — R$ ' + parseFloat(s.valor || 0).toFixed(2) + ' — ' + (s.tipo || 'principal') + '</div>' +
                 '</div><div class="actions">' +
                 '<button class="btn btn-sm btn-gold" onclick="editarServico(' + s.id + ')">✏️</button>' +
-                (s.ativo !== false ? '<button class="btn btn-sm btn-danger" onclick="desativarServico(' + s.id + ')">🗑️</button>' : '<button class="btn btn-sm btn-success" onclick="reativarServico(' + s.id + ')">🔄</button>') +
+                (s.ativo !== false ? '<button class="btn btn-sm btn-danger" onclick="desativarServico(' + s.id + ')">🗑️</button>' : '<button class="btn btn-sm btn-success" onclick="reativarServico(' + s.id + ')">🔄</button><button class="btn btn-sm" style="background:var(--danger);color:#fff;border:none;" onclick="excluirServicoPermanentemente(' + s.id + ')">❌ Excluir</button>') +
                 '</div></div></div>';
         }
 
@@ -391,7 +519,22 @@
             }).catch(function() { mostrarToast('Erro ao reativar.', 'error'); });
         }
 
-        // ========== CONFIG HORÁRIOS ==========
+        function excluirServicoPermanentemente(id) {
+            if (!confirm('⚠️ Tem certeza que deseja EXCLUIR PERMANENTEMENTE este serviço? Esta ação não pode ser desfeita.')) return;
+            fetch('/api/admin/servicos/' + id + '/permanentemente', {
+                method: 'DELETE',
+                headers: { 'x-admin-secret': localStorage.getItem('admin_secret') || '' }
+            }).then(function(r) { return r.json(); }).then(function(d) {
+                if (d.success) {
+                    mostrarToast('🗑️ Serviço excluído permanentemente!', 'success');
+                    carregarServicos();
+                } else {
+                    mostrarToast('Erro: ' + (d.erro || 'desconhecido'), 'error');
+                }
+            }).catch(function() { mostrarToast('Erro ao excluir serviço.', 'error'); });
+        }
+
+        // ========== CONFIG HORÁRIOS (INTERATIVO) ==========
         function carregarConfigHorarios() {
             var div = document.getElementById('horarios-config');
             div.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
@@ -403,27 +546,174 @@
                     return;
                 }
                 var dias = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
-                div.innerHTML = '<h4 style="margin-bottom:1rem;">📅 Horários de Funcionamento</h4>';
+                div.innerHTML = '<h4 style="margin-bottom:1rem;">📅 Horários de Funcionamento</h4>' +
+                    '<p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">Clique em 🟢/🔴 para ativar/desativar. Edite os horários e clique em 💾 para salvar.</p>';
                 var html = '<div style="display:grid;gap:0.5rem;">';
                 configs.forEach(function(h) {
-                    var diaNome = h.diaNome || dias[h.dia_semana] || '—';
-                    var statusIcon = h.ativo ? '🟢' : '🔴';
-                    var horarios = h.ativo ? (h.abertura + ' — ' + h.fechamento + ' (intervalo: ' + h.intervalo_corte_minutos + 'min)') : 'Fechado';
-                    html += '<div class="servico-card"><strong>' + statusIcon + ' ' + diaNome + '</strong> <span style="color:var(--muted);margin-left:0.5rem;">' + horarios + '</span></div>';
+                    var ativo = h.ativo ? true : false;
+                    html += '<div class="servico-card" style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">' +
+                        '<button style="background:none;border:none;font-size:1.3rem;cursor:pointer;" onclick="toggleDia(' + h.dia_semana + ',' + (ativo ? '0' : '1') + ')" title="Clique para ' + (ativo ? 'desativar' : 'ativar') + '">' + (ativo ? '🟢' : '🔴') + '</button>' +
+                        '<strong style="min-width:110px;">' + dias[h.dia_semana] + '</strong>' +
+                        (ativo ?
+                            '<input type="time" id="abertura-' + h.dia_semana + '" value="' + h.abertura + '" style="background:var(--bg-elevated);color:var(--text-primary);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.25rem 0.4rem;width:90px;">' +
+                            '<span style="color:var(--text-muted);">—</span>' +
+                            '<input type="time" id="fechamento-' + h.dia_semana + '" value="' + h.fechamento + '" style="background:var(--bg-elevated);color:var(--text-primary);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.25rem 0.4rem;width:90px;">' +
+                            '<button class="btn btn-sm" style="background:var(--brand-primary);color:#000;border:none;font-size:0.75rem;padding:0.2rem 0.5rem;" onclick="salvarHorarioDia(' + h.dia_semana + ')">💾</button>'
+                        : '<span style="color:var(--text-muted);font-size:0.85rem;">Fechado</span>') +
+                        '</div>';
                 });
                 html += '</div>';
                 div.innerHTML = html;
-
-                // Bloqueios
                 carregarBloqueios();
             }).catch(function() {
                 div.innerHTML = '<p class="text-danger">Erro ao carregar horários.</p>';
             });
         }
 
+        function toggleDia(diaSemana, novoAtivo) {
+            fetch('/api/config/horarios/' + diaSemana, {
+                method: 'PUT',
+                headers: apiHeaders(),
+                body: JSON.stringify({ ativo: novoAtivo === 1 })
+            }).then(function(r) { return r.json(); }).then(function(d) {
+                if (d.success) {
+                    mostrarToast('✅ Dia ' + (novoAtivo ? 'ativado!' : 'desativado!'), 'success');
+                    carregarConfigHorarios();
+                } else {
+                    mostrarToast('Erro: ' + (d.erro || 'desconhecido'), 'error');
+                }
+            }).catch(function() { mostrarToast('Erro ao atualizar.', 'error'); });
+        }
+
+        function salvarHorarioDia(diaSemana) {
+            var abertura = document.getElementById('abertura-' + diaSemana).value;
+            var fechamento = document.getElementById('fechamento-' + diaSemana).value;
+            if (!abertura || !fechamento) {
+                mostrarToast('Preencha abertura e fechamento.', 'error');
+                return;
+            }
+            fetch('/api/config/horarios/' + diaSemana, {
+                method: 'PUT',
+                headers: apiHeaders(),
+                body: JSON.stringify({ abertura: abertura, fechamento: fechamento })
+            }).then(function(r) { return r.json(); }).then(function(d) {
+                if (d.success) {
+                    mostrarToast('✅ Horário salvo!', 'success');
+                    carregarConfigHorarios();
+                } else {
+                    mostrarToast('Erro: ' + (d.erro || 'desconhecido'), 'error');
+                }
+            }).catch(function() { mostrarToast('Erro ao salvar.', 'error'); });
+        }
+
+        // ========== BLOQUEIOS (CRUD) ==========
+        function mostrarFormBloqueio() {
+            document.getElementById('bloqueio-form').classList.remove('hidden');
+            document.getElementById('bl-tipo').value = 'dia';
+            document.getElementById('bl-data').value = '';
+            document.getElementById('bl-datafim').value = '';
+            document.getElementById('bl-horainicio').value = '';
+            document.getElementById('bl-horafim').value = '';
+            document.getElementById('bl-motivo').value = '';
+            toggleTipoBloqueio();
+            document.getElementById('bloqueio-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function fecharFormBloqueio() {
+            document.getElementById('bloqueio-form').classList.add('hidden');
+        }
+
+        function toggleTipoBloqueio() {
+            var tipo = document.getElementById('bl-tipo').value;
+            document.getElementById('bl-data-group').classList.remove('hidden');
+            document.getElementById('bl-data-label').textContent = tipo === 'range' ? 'Data início' : 'Data';
+            document.getElementById('bl-datafim-group').classList.toggle('hidden', tipo !== 'range');
+            document.getElementById('bl-horainicio-group').classList.toggle('hidden', tipo !== 'horario');
+            document.getElementById('bl-horafim-group').classList.toggle('hidden', tipo !== 'horario');
+        }
+
+        function salvarBloqueio() {
+            var tipo = document.getElementById('bl-tipo').value;
+            var data = document.getElementById('bl-data').value;
+            var dataFim = document.getElementById('bl-datafim').value;
+            var horaInicio = document.getElementById('bl-horainicio').value;
+            var horaFim = document.getElementById('bl-horafim').value;
+            var motivo = document.getElementById('bl-motivo').value.trim();
+
+            if (!data) { mostrarToast('Selecione uma data.', 'error'); return; }
+
+            var payload = { data: data, motivo: motivo };
+            if (tipo === 'range') {
+                if (!dataFim) { mostrarToast('Selecione a data fim.', 'error'); return; }
+                payload.dataFim = dataFim;
+            }
+            if (tipo === 'horario') {
+                if (!horaInicio || !horaFim) { mostrarToast('Preencha hora início e fim.', 'error'); return; }
+                payload.horaInicio = horaInicio;
+                payload.horaFim = horaFim;
+            }
+
+            fetch('/api/admin/bloqueios', {
+                method: 'POST',
+                headers: apiHeaders(),
+                body: JSON.stringify(payload)
+            }).then(function(r) { return r.json(); }).then(function(d) {
+                if (d.success) {
+                    mostrarToast('✅ Bloqueio criado!', 'success');
+                    fecharFormBloqueio();
+                    carregarBloqueios();
+                } else {
+                    mostrarToast('Erro: ' + (d.erro || 'desconhecido'), 'error');
+                }
+            }).catch(function() { mostrarToast('Erro ao criar bloqueio.', 'error'); });
+        }
+
+        function removerBloqueio(id) {
+            if (!confirm('Remover este bloqueio?')) return;
+            fetch('/api/admin/bloqueios/' + id, {
+                method: 'DELETE',
+                headers: apiHeaders()
+            }).then(function(r) { return r.json(); }).then(function(d) {
+                if (d.success) {
+                    mostrarToast('🗑️ Bloqueio removido!', 'success');
+                    carregarBloqueios();
+                } else {
+                    mostrarToast('Erro: ' + (d.erro || 'desconhecido'), 'error');
+                }
+            }).catch(function() { mostrarToast('Erro ao remover.', 'error'); });
+        }
+
         function carregarBloqueios() {
             var div = document.getElementById('bloqueios-admin');
-            div.innerHTML = '<h4 style="margin-bottom:0.5rem;">🚫 Bloqueios de Agenda</h4><p class="text-muted">Carregando...</p>';
+            div.innerHTML = '<h4 style="margin-bottom:0.5rem;">🚫 Bloqueios de Agenda</h4>' +
+                '<div style="margin-bottom:0.75rem;">' +
+                '<button class="btn btn-sm btn-primary" onclick="mostrarFormBloqueio()">➕ Novo Bloqueio</button>' +
+                '<button class="btn btn-sm" style="background:var(--border);color:var(--light);margin-left:0.5rem;" onclick="carregarBloqueios()">🔄</button>' +
+                '</div>' +
+                '<div id="bloqueio-form" class="card hidden" style="max-width:500px;margin-bottom:1rem;">' +
+                '<div class="card-header"><span class="card-title">🚫 Novo Bloqueio</span></div>' +
+                '<div class="card-body">' +
+                '<div class="form-group"><label class="form-label">Tipo</label>' +
+                '<select id="bl-tipo" class="form-input" onchange="toggleTipoBloqueio()">' +
+                '<option value="dia">📅 Dia específico</option>' +
+                '<option value="range">📅 Período / Férias</option>' +
+                '<option value="horario">⏰ Horário específico</option>' +
+                '</select></div>' +
+                '<div class="form-group" id="bl-data-group"><label class="form-label" id="bl-data-label">Data</label>' +
+                '<input type="date" id="bl-data" class="form-input"></div>' +
+                '<div class="form-group hidden" id="bl-datafim-group"><label class="form-label">Data fim</label>' +
+                '<input type="date" id="bl-datafim" class="form-input"></div>' +
+                '<div class="form-group hidden" id="bl-horainicio-group"><label class="form-label">Hora início</label>' +
+                '<input type="time" id="bl-horainicio" class="form-input"></div>' +
+                '<div class="form-group hidden" id="bl-horafim-group"><label class="form-label">Hora fim</label>' +
+                '<input type="time" id="bl-horafim" class="form-input"></div>' +
+                '<div class="form-group"><label class="form-label">Motivo (opcional)</label>' +
+                '<input type="text" id="bl-motivo" class="form-input" placeholder="Férias, feriado, manutenção..."></div>' +
+                '<div style="display:flex;gap:0.5rem;">' +
+                '<button class="btn btn-primary" onclick="salvarBloqueio()">💾 Salvar</button>' +
+                '<button class="btn btn-secondary" onclick="fecharFormBloqueio()">Cancelar</button></div>' +
+                '</div></div>' +
+                '<div id="bloqueios-list"><p class="text-muted">Carregando...</p></div>';
             fetch('/api/admin/bloqueios', { headers: apiHeaders() })
             .then(function(r) { return r.json(); }).then(function(d) {
                 var bloqueios = d.bloqueios || [];
@@ -434,13 +724,25 @@
                     html = '<div style="display:grid;gap:0.5rem;">';
                     bloqueios.forEach(function(b) {
                         var dataObj = new Date(b.data + 'T12:00:00');
-                        html += '<div class="servico-card"><strong>🚫 ' + dataObj.toLocaleDateString('pt-BR') + '</strong> ' + (b.motivo ? '— ' + b.motivo : '') + '</div>';
+                        var desc = dataObj.toLocaleDateString('pt-BR');
+                        if (b.data_fim) {
+                            var dataFimObj = new Date(b.data_fim + 'T12:00:00');
+                            desc += ' — ' + dataFimObj.toLocaleDateString('pt-BR');
+                        }
+                        if (b.hora_inicio && b.hora_fim) {
+                            desc += ' | ' + b.hora_inicio.slice(0,5) + ' às ' + b.hora_fim.slice(0,5);
+                        }
+                        html += '<div class="servico-card" style="display:flex;align-items:center;gap:0.5rem;">' +
+                            '<strong style="flex:1;">🚫 ' + desc + '</strong>' +
+                            (b.motivo ? '<span style="color:var(--text-muted);font-size:0.85rem;">— ' + b.motivo + '</span>' : '') +
+                            '<button class="btn btn-sm btn-danger" onclick="removerBloqueio(\'' + b.id + '\')">🗑️</button>' +
+                            '</div>';
                     });
                     html += '</div>';
                 }
-                div.innerHTML = '<h4 style="margin-bottom:0.5rem;">🚫 Bloqueios de Agenda</h4>' + html;
+                document.getElementById('bloqueios-list').innerHTML = html;
             }).catch(function() {
-                div.innerHTML = '<h4 style="margin-bottom:0.5rem;">🚫 Bloqueios de Agenda</h4><p class="text-danger">Erro ao carregar bloqueios.</p>';
+                document.getElementById('bloqueios-list').innerHTML = '<p class="text-danger">Erro ao carregar bloqueios.</p>';
             });
         }
 
