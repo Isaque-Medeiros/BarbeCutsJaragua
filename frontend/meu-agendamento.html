@@ -12,7 +12,7 @@
     <nav class="navbar" id="navbar">
         <div class="container">
             <a href="/" class="navbar-brand">
-                <img src="/img/logo.jpeg" alt="BarbeCuts" class="navbar-logo">
+                <img src="/img/logo.jpeg" alt="Barbe City" class="navbar-logo">
                 <div class="navbar-brand-text">Barbe City<span>Jaraguá</span></div>
             </a>
             <div class="navbar-links">
