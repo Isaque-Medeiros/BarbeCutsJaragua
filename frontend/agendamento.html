@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agendar — Barbe City Jaraguá</title>
+    <meta name="description" content="Agende seu horário na Barbe City Jaraguá. Cortes profissionais, barba, sobrancelha e mais.">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" href="/img/logo.jpeg" type="image/jpeg">
+</head>
+<body>
+    <nav class="navbar" id="navbar">
+        <div class="container">
+            <a href="/" class="navbar-brand">
+                <img src="/img/logo.jpeg" alt="BarbeCuts" class="navbar-logo">
+                <div class="navbar-brand-text">Barbe City<span>Jaraguá</span></div>
+            </a>
+            <div class="navbar-links">
+                <a href="/">Início</a>
+                <a href="/agendamento" class="active">Agendar</a>
+                <a href="/meu-agendamento">Meu Agendamento</a>
+                <a href="/agendamento" class="navbar-cta">✂️ Agendar Horário</a>
+            </div>
+            <button class="hamburger" id="hamburger" aria-label="Menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="mobile-overlay" id="mobile-overlay"></div>
+    <div class="mobile-menu" id="mobile-menu">
+        <a href="/">🏠 Início</a>
+        <a href="/agendamento" class="active">✂️ Agendar</a>
+        <a href="/meu-agendamento">🔍 Meu Agendamento</a>
+        <a href="/agendamento" class="navbar-cta" style="margin-top: 1rem; justify-content: center;">✂️ Agendar Horário</a>
+    </div>
+
+    <section class="page-section" style="padding-top: 0;">
+        <div class="container">
+            <!-- Steps Indicator -->
+            <div class="steps" id="steps-indicator">
+                <div class="step active" data-step="1"><span class="step-number">1</span>Serviço</div>
+                <div class="step" data-step="2"><span class="step-number">2</span>Data & Horário</div>
+                <div class="step" data-step="3"><span class="step-number">3</span>Confirmação</div>
+                <div class="step" data-step="4"><span class="step-number">4</span>Comprovante</div>
+            </div>
+
+            <!-- STEP 1 -->
+            <div id="step-1" class="booking-card" style="max-width:720px;margin:0 auto;">
+                <div class="booking-card-header">
+                    <span class="booking-card-icon">✂️</span>
+                    <div>
+                        <h3 class="booking-card-title">Escolha o Serviço</h3>
+                        <p class="booking-card-subtitle">Selecione os serviços desejados</p>
+                    </div>
+                </div>
+                <div class="booking-card-body">
+                    <div id="servicos-list"></div>
+                    <div id="adicionais-container" style="margin-top:2rem;">
+                        <div class="booking-section-title">
+                            <span class="booking-section-icon">✨</span>
+                            <span>Serviços Adicionais</span>
+                        </div>
+                        <p class="booking-section-desc">Também podem ser agendados individualmente</p>
+                        <div id="adicionais-list" class="grid grid-2" style="margin-top:1rem;"></div>
+                    </div>
+                    <div id="servico-resumo" class="hidden" style="margin-top:2rem;">
+                        <div class="booking-summary">
+                            <div class="booking-summary-title">📋 Resumo do Pedido</div>
+                            <div class="booking-summary-row">
+                                <span class="booking-summary-label">Serviços</span>
+                                <span class="booking-summary-value" id="resumo-servico">—</span>
+                            </div>
+                            <div class="booking-summary-row">
+                                <span class="booking-summary-label">Duração</span>
+                                <span class="booking-summary-value" id="resumo-duracao">—</span>
+                            </div>
+                            <div class="booking-summary-row">
+                                <span class="booking-summary-label">Valor</span>
+                                <span class="booking-summary-value booking-summary-total" id="resumo-valor">—</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary btn-block btn-lg" onclick="irParaStep(2)">
+                            Continuar <span style="font-size:1.2rem;">→</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 2 -->
+            <div id="step-2" class="booking-card hidden" style="max-width:720px;margin:0 auto;">
+                <div class="booking-card-header">
+                    <span class="booking-card-icon">📅</span>
+                    <div>
+                        <h3 class="booking-card-title">Data & Horário</h3>
+                        <p class="booking-card-subtitle">Escolha o melhor dia e horário</p>
+                    </div>
+                </div>
+                <div class="booking-card-body">
+                    <div id="loading-dates" class="loading"><div class="spinner"></div></div>
+                    <div id="dates-container" class="hidden" style="margin-bottom:2rem;">
+                        <div class="booking-section-title">
+                            <span class="booking-section-icon">📅</span>
+                            <span>Selecione uma data</span>
+                        </div>
+                        <div id="dates-list" class="dates-grid" style="margin-top:0.75rem;"></div>
+                    </div>
+                    <div id="loading-slots" class="loading hidden"><div class="spinner"></div></div>
+                    <div id="slots-container" class="hidden" style="margin-bottom:1rem;">
+                        <div class="booking-section-title">
+                            <span class="booking-section-icon">⏰</span>
+                            <span>Horários disponíveis</span>
+                        </div>
+                        <div id="slots-list" class="slots-grid"></div>
+                    </div>
+                    <div id="no-slots" class="empty-state hidden">
+                        <div class="empty-icon">🕐</div>
+                        <p>Nenhum horário disponível nesta data.</p>
+                        <p class="text-muted" style="font-size:0.9rem;">Tente selecionar outra data.</p>
+                    </div>
+                    <div class="booking-actions">
+                        <button class="btn btn-secondary" onclick="irParaStep(1)">← Voltar</button>
+                        <button class="btn btn-primary btn-lg" id="btn-continuar-step2" onclick="irParaStep(3)" disabled>
+                            Continuar →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 3 -->
+            <div id="step-3" class="booking-card hidden" style="max-width:720px;margin:0 auto;">
+                <div class="booking-card-header">
+                    <span class="booking-card-icon">✅</span>
+                    <div>
+                        <h3 class="booking-card-title">Confirmação</h3>
+                        <p class="booking-card-subtitle">Revise os dados e confirme</p>
+                    </div>
+                </div>
+                <div class="booking-card-body">
+                    <div class="booking-summary">
+                        <div class="booking-summary-title">📋 Detalhes do Agendamento</div>
+                        <div class="booking-summary-row">
+                            <span class="booking-summary-label">Serviço</span>
+                            <span class="booking-summary-value" id="conf-servico">—</span>
+                        </div>
+                        <div class="booking-summary-row">
+                            <span class="booking-summary-label">Adicionais</span>
+                            <span class="booking-summary-value" id="conf-adicionais">Nenhum</span>
+                        </div>
+                        <div class="booking-summary-row">
+                            <span class="booking-summary-label">Data</span>
+                            <span class="booking-summary-value" id="conf-data">—</span>
+                        </div>
+                        <div class="booking-summary-row">
+                            <span class="booking-summary-label">Horário</span>
+                            <span class="booking-summary-value" id="conf-horario">—</span>
+                        </div>
+                        <div class="booking-summary-row">
+                            <span class="booking-summary-label">Duração</span>
+                            <span class="booking-summary-value" id="conf-duracao">—</span>
+                        </div>
+                        <div class="booking-summary-row">
+                            <span class="booking-summary-label">Valor Total</span>
+                            <span class="booking-summary-value booking-summary-total" id="conf-valor">—</span>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom:1.5rem;">
+                        <div class="booking-section-title" style="margin-bottom:0.5rem;">
+                            <span class="booking-section-icon">👤</span>
+                            <span>Seus dados</span>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="cliente-nome">Nome completo *</label>
+                            <input type="text" id="cliente-nome" class="form-input form-input-premium" placeholder="Digite seu nome" maxlength="100" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="cliente-telefone">WhatsApp / Telefone *</label>
+                            <input type="text" id="cliente-telefone" class="form-input form-input-premium" placeholder="(11) 91504-0871" maxlength="20">
+                            <p class="form-hint">Informe seu telefone para contato e confirmação.</p>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="cliente-observacao">Observação <span style="color:var(--text-muted);font-weight:400;">(opcional)</span></label>
+                            <textarea id="cliente-observacao" class="form-textarea form-input-premium" placeholder="Alguma observação ou pedido especial?" maxlength="500" style="min-height:70px;"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="booking-actions">
+                        <button class="btn btn-secondary" onclick="irParaStep(2)">← Voltar</button>
+                        <button class="btn btn-primary btn-lg btn-block" id="btn-confirmar" onclick="confirmarAgendamento()">
+                            ✅ Confirmar Agendamento
+                        </button>
+                    </div>
+                    <div id="conf-loading" class="loading hidden">
+                        <div class="spinner"></div>
+                        <p class="text-secondary" style="margin-left:1rem;">Confirmando agendamento...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 4: COMPROVANTE (OBRIGATÓRIO) -->
+            <div id="step-4" class="booking-card hidden" style="max-width:560px;margin:0 auto;">
+                <div class="booking-card-header">
+                    <span class="booking-card-icon">🎫</span>
+                    <div>
+                        <h3 class="booking-card-title">Comprovante</h3>
+                        <p class="booking-card-subtitle">Seu agendamento foi confirmado! Guarde o comprovante.</p>
+                    </div>
+                </div>
+                <div class="booking-card-body" style="text-align:center;">
+                    <!-- Aviso obrigatório -->
+                    <div class="comprovante-alert">
+                        <span class="comprovante-alert-icon">📱</span>
+                        <div>
+                            <strong>Envie o comprovante no WhatsApp</strong>
+                            <p>Compartilhe os detalhes do seu agendamento para garantir a confirmação.</p>
+                        </div>
+                    </div>
+
+                    <!-- Ticket -->
+                    <div class="booking-ticket" id="comprovante-ticket">
+                        <div class="booking-ticket-logo">
+                            <img src="/img/logo.jpeg" alt="BarbeCuts" class="booking-ticket-logo-img">
+                        </div>
+                        <div class="booking-ticket-header">Comprovante de Agendamento</div>
+                        <div class="booking-ticket-divider"></div>
+                        <div class="booking-ticket-body">
+                            <div class="booking-ticket-row">
+                                <span class="booking-ticket-label">Código</span>
+                                <span class="booking-ticket-value booking-ticket-code" id="sucesso-codigo">—</span>
+                            </div>
+                            <div class="booking-ticket-row">
+                                <span class="booking-ticket-label">Serviço</span>
+                                <span class="booking-ticket-value" id="sucesso-servico">—</span>
+                            </div>
+                            <div class="booking-ticket-row">
+                                <span class="booking-ticket-label">Data</span>
+                                <span class="booking-ticket-value" id="sucesso-data">—</span>
+                            </div>
+                            <div class="booking-ticket-row">
+                                <span class="booking-ticket-label">Horário</span>
+                                <span class="booking-ticket-value" id="sucesso-horario">—</span>
+                            </div>
+                            <div class="booking-ticket-row">
+                                <span class="booking-ticket-label">Total</span>
+                                <span class="booking-ticket-value booking-ticket-total" id="sucesso-valor">—</span>
+                            </div>
+                        </div>
+                        <div class="booking-ticket-footer">
+                            ✂️ Barbe City Jaraguá — "Tradição e estilo em cada corte"
+                        </div>
+                    </div>
+
+                    <!-- Ações obrigatórias -->
+                    <div style="margin-top:1.5rem;">
+                        <a href="#" id="whatsapp-link-final" target="_blank" class="btn btn-whatsapp btn-lg comprovante-whatsapp-btn" style="justify-content:center;animation:pulse 2s infinite;" onclick="marcarComprovanteEnviado()">
+                            📱 Enviar Comprovante no WhatsApp
+                        </a>
+                        <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;">
+                            ⚠️ O envio do comprovante é necessário para confirmar seu agendamento.
+                        </p>
+                    </div>
+
+                    <!-- Liberado após enviar -->
+                    <div id="comprovante-liberado" class="hidden" style="margin-top:1.5rem;border-top:1px solid var(--border);padding-top:1.5rem;">
+                        <div style="display:flex;align-items:center;gap:0.5rem;justify-content:center;margin-bottom:1rem;">
+                            <span style="font-size:1.5rem;">✅</span>
+                            <span style="color:var(--gold);font-weight:600;">Comprovante enviado com sucesso!</span>
+                        </div>
+                        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+                            <a href="/" class="btn btn-secondary btn-block" style="flex:1;">← Voltar ao Início</a>
+                            <a href="/meu-agendamento?hash=" id="link-meu-agendamento" class="btn btn-primary btn-block" style="flex:1;">🔍 Ver Agendamento</a>
+                        </div>
+                        <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">
+                            💡 Você também pode <button onclick="copiarCodigo()" style="background:none;border:none;color:var(--gold);cursor:pointer;text-decoration:underline;font-size:0.75rem;">copiar o código</button> do agendamento.
+                        </p>
+                    </div>
+
+                    <!-- Fallback: pular -->
+                    <div style="margin-top:1rem;">
+                        <button onclick="pularComprovante()" class="btn-link" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.8rem;text-decoration:underline;">
+                            Já copiei o código, ir para início →
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Faith reminder at bottom -->
+    <section class="faith-section faith-section-sm">
+        <div class="container">
+            <div class="faith-content">
+                <div class="faith-cross">✝️</div>
+                <h2 class="faith-title" style="font-size:1.6rem;">"Deus é Fiel"</h2>
+                <div class="faith-divider"></div>
+                <p class="faith-text">
+                    "Porque nele vivemos, e nos movemos, e existimos"<br>
+                    <span class="faith-ref">— Atos 17:28</span>
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand-section">
+                    <div class="footer-brand-title">✂️ Barbe City Jaraguá</div>
+                    <p class="footer-brand-desc">Tradição e estilo em cada corte. Agende seu horário e transforme seu visual.</p>
+                    <div class="footer-social">
+                        <a href="https://wa.me/5511915040871" target="_blank" title="WhatsApp">📱</a>
+                        <a href="https://www.instagram.com" target="_blank" title="Instagram">📷</a>
+                        <a href="https://www.facebook.com" target="_blank" title="Facebook">👍</a>
+                    </div>
+                </div>
+                <div>
+                    <h4>Links</h4>
+                    <ul class="footer-links">
+                        <li><a href="/">Início</a></li>
+                        <li><a href="/agendamento">Agendar Horário</a></li>
+                        <li><a href="/meu-agendamento">Meu Agendamento</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Contato</h4>
+                    <div class="footer-contact">
+                        <p>📱 <a href="https://wa.me/5511915040871" target="_blank">(11) 91504-0871</a></p>
+                        <p>📍 R. Jairo de Almeida Machado, 220 — Jaraguá</p>
+                        <p>🕐 Ter-Dom: 09h às 20h</p>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2026 Barbe City Jaraguá.</p>
+                <div class="footer-faith">
+                    <span class="footer-faith-cross">✝️</span>
+                    "Deus é Fiel"
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <a href="https://wa.me/5511915040871" target="_blank" class="float-whatsapp" title="Fale conosco no WhatsApp">📱</a>
+
+    <script src="/js/api.js"></script>
+    <script>
+        let state = {
+            servicoSelecionado: null,
+            adicionaisSelecionados: [],
+            dataSelecionada: null,
+            slotSelecionado: null,
+            datasDisponiveis: [],
+            agendamentoCriado: null,
+            comprovanteEnviado: false,
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const navbar = document.getElementById('navbar');
+            window.addEventListener('scroll', () => navbar.classList.toggle('scrolled', window.scrollY > 50));
+
+            const hamburger = document.getElementById('hamburger');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const overlay = document.getElementById('mobile-overlay');
+            function toggleMenu() {
+                hamburger.classList.toggle('active');
+                mobileMenu.classList.toggle('open');
+                overlay.classList.toggle('open');
+                document.body.style.overflow = mobileMenu.classList.contains('open') ? 'hidden' : '';
+            }
+            hamburger.addEventListener('click', toggleMenu);
+            overlay.addEventListener('click', toggleMenu);
+            mobileMenu.querySelectorAll('a').forEach(l => l.addEventListener('click', toggleMenu));
+
+            // Scroll reveal
+            const revealElements = document.querySelectorAll('.reveal');
+            const revealObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+            revealElements.forEach(el => revealObserver.observe(el));
+
+            carregarServicos();
+
+            // Check URL for ?servico=X
+            var params = new URLSearchParams(window.location.search);
+            var servicoParam = params.get('servico');
+            if (servicoParam) {
+                state._servicoPrefill = parseInt(servicoParam);
+            }
+        });
+
+        function showToast(msg, tipo) {
+            const existing = document.querySelector('.toast');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.className = 'toast toast-' + (tipo || 'info');
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 4500);
+        }
+
+        function copiarCodigo() {
+            var codigo = document.getElementById('sucesso-codigo').textContent;
+            navigator.clipboard.writeText(codigo).then(() => {
+                showToast('✅ Código copiado! Guarde-o para consultar seu agendamento.', 'success');
+            }).catch(() => {
+                showToast('📝 Código: ' + codigo, 'info');
+            });
+        }
+
+        // ============ STEP NAVIGATION ============
+        function irParaStep(n) {
+            if (n === 2) {
+                var temServico = state.servicoSelecionado || state.adicionaisSelecionados.length > 0;
+                if (!temServico) {
+                    showToast('Selecione pelo menos um serviço.', 'error');
+                    return;
+                }
+            }
+            if (n === 3 && !state.slotSelecionado) {
+                showToast('Selecione um horário primeiro.', 'error');
+                return;
+            }
+
+            document.querySelectorAll('.step').forEach(el => {
+                const s = parseInt(el.dataset.step);
+                el.classList.toggle('active', s === n);
+                el.classList.toggle('completed', s < n);
+            });
+            [1, 2, 3, 4].forEach(i => {
+                document.getElementById('step-' + i).classList.toggle('hidden', i !== n);
+            });
+            window.scrollTo({ top: 300, behavior: 'smooth' });
+
+            if (n === 2) carregarDatas();
+            if (n === 3) preencherConfirmacao();
+        }
+
+        // ============ STEP 1: SERVICES ============
+        async function carregarServicos() {
+            try {
+                const data = await listarServicos();
+                const container = document.getElementById('servicos-list');
+                container.innerHTML = '';
+                if (!data.servicos || data.servicos.length === 0) {
+                    container.innerHTML = '<p class="text-secondary">Nenhum serviço disponível.</p>';
+                    return;
+                }
+                window._servicos = data.servicos;
+                const principais = data.servicos.filter(s => s.tipo === 'principal' || s.tipo === 'combo' || !s.tipo);
+                const adicionais = data.servicos.filter(s => s.tipo === 'adicional');
+
+                function getIcone(s) {
+                    const nome = (s.nome || '').toLowerCase();
+                    if (s.tipo === 'combo') return '🔥';
+                    if (nome.includes('corte')) return '✂️';
+                    if (nome.includes('barba')) return '🪒';
+                    if (nome.includes('sobrancelha')) return '✨';
+                    if (nome.includes('botox')) return '💉';
+                    if (nome.includes('luzes') || nome.includes('platinado')) return '💡';
+                    return '✂️';
+                }
+
+                principais.forEach(s => {
+                    const card = document.createElement('div');
+                    card.className = 'service-card service-card-premium';
+                    card.dataset.id = s.id;
+                    const valor = parseFloat(s.valor || s.preco || 0).toFixed(2);
+                    card.innerHTML =
+                        '<div class="service-card-premium-icon">' + getIcone(s) + '</div>' +
+                        '<div class="service-card-premium-content">' +
+                            '<div class="service-card-premium-name">' + (s.nome || '') + '</div>' +
+                            '<div class="service-card-premium-desc">' + (s.descricao || 'Serviço profissional') + '</div>' +
+                            '<div class="service-card-premium-footer">' +
+                                '<span class="service-card-premium-price">R$ ' + valor + '</span>' +
+                                '<span class="service-card-premium-duration">⏱ ' + (s.duracao_minutos || 30) + ' min</span>' +
+                            '</div>' +
+                        '</div>';
+                    card.addEventListener('click', () => selecionarServico(s, principais));
+                    container.appendChild(card);
+                });
+
+                // Adicionais - SEMPRE visíveis e selecionáveis individualmente
+                if (adicionais.length > 0) {
+                    const list = document.getElementById('adicionais-list');
+                    list.innerHTML = '';
+                    adicionais.forEach(s => {
+                        const card = document.createElement('div');
+                        card.className = 'service-card service-card-sm service-card-premium-sm';
+                        card.dataset.id = s.id;
+                        const valor = parseFloat(s.valor || s.preco || 0).toFixed(2);
+                        card.innerHTML =
+                            '<div class="service-card-premium-icon" style="font-size:1.2rem;">✨</div>' +
+                            '<div class="service-card-premium-content">' +
+                                '<div class="service-card-premium-name" style="font-size:0.9rem;">' + (s.nome || '') + '</div>' +
+                                '<div class="service-card-premium-desc" style="font-size:0.75rem;color:var(--text-muted);">' + (s.descricao || 'Serviço adicional') + '</div>' +
+                                '<div class="service-card-premium-footer">' +
+                                    '<span class="service-card-premium-price" style="font-size:0.85rem;">R$ ' + valor + '</span>' +
+                                    '<span class="service-card-premium-duration" style="font-size:0.7rem;">' + (s.duracao_minutos || 0) + ' min</span>' +
+                                '</div>' +
+                            '</div>';
+                        card.addEventListener('click', () => toggleAdicional(s, card));
+                        list.appendChild(card);
+                    });
+                }
+
+                // Auto-select if prefill param exists
+                if (state._servicoPrefill && principais.length > 0) {
+                    const found = principais.find(s => s.id === state._servicoPrefill);
+                    if (found) {
+                        setTimeout(() => selecionarServico(found, principais), 300);
+                    }
+                }
+            } catch (err) {
+                document.getElementById('servicos-list').innerHTML = '<p class="text-danger">Erro ao carregar serviços: ' + err.message + '</p>';
+            }
+        }
+
+        function selecionarServico(s, principais) {
+            state.servicoSelecionado = s;
+            // Não limpa adicionais ao selecionar um principal
+            document.querySelectorAll('#servicos-list .service-card-premium').forEach(c => c.classList.remove('selected'));
+            var el = document.querySelector('#servicos-list .service-card-premium[data-id="' + s.id + '"]');
+            if (el) el.classList.add('selected');
+            atualizarResumo();
+            document.getElementById('servico-resumo').classList.remove('hidden');
+            
+            setTimeout(() => {
+                document.getElementById('servico-resumo').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 200);
+        }
+
+        function toggleAdicional(s, card) {
+            var idx = state.adicionaisSelecionados.findIndex(function(a) { return a.id === s.id; });
+            if (idx >= 0) {
+                state.adicionaisSelecionados.splice(idx, 1);
+                card.classList.remove('selected');
+            } else {
+                state.adicionaisSelecionados.push(s);
+                card.classList.add('selected');
+            }
+            // Se não tem principal mas tem adicionais, mostra o resumo
+            if (!state.servicoSelecionado && state.adicionaisSelecionados.length > 0) {
+                document.getElementById('servico-resumo').classList.remove('hidden');
+            }
+            // Se não tem nada, esconde o resumo
+            if (!state.servicoSelecionado && state.adicionaisSelecionados.length === 0) {
+                document.getElementById('servico-resumo').classList.add('hidden');
+            }
+            atualizarResumo();
+        }
+
+        function atualizarResumo() {
+            var temServico = state.servicoSelecionado;
+            var temAdicionais = state.adicionaisSelecionados.length > 0;
+            
+            if (!temServico && !temAdicionais) return;
+
+            var total = 0;
+            var duracao = 0;
+            var servicosStr = [];
+
+            if (temServico) {
+                total += parseFloat(state.servicoSelecionado.valor || state.servicoSelecionado.preco || 0);
+                duracao += state.servicoSelecionado.duracao_minutos || 0;
+                servicosStr.push(state.servicoSelecionado.nome);
+            }
+
+            state.adicionaisSelecionados.forEach(function(a) {
+                total += parseFloat(a.valor || a.preco || 0);
+                duracao += a.duracao_minutos || 0;
+                servicosStr.push(a.nome + ' ✨');
+            });
+
+            document.getElementById('resumo-servico').textContent = servicosStr.join(' + ');
+            document.getElementById('resumo-duracao').textContent = duracao + ' min';
+            document.getElementById('resumo-valor').textContent = 'R$ ' + total.toFixed(2);
+        }
+
+        // ============ STEP 2: DATES & SLOTS ============
+        async function carregarDatas() {
+            var loadingDates = document.getElementById('loading-dates');
+            var datesContainer = document.getElementById('dates-container');
+            var datesList = document.getElementById('dates-list');
+            loadingDates.classList.remove('hidden');
+            datesContainer.classList.add('hidden');
+            try {
+                var data = await listarDatasDisponiveis();
+                state.datasDisponiveis = data.datas || [];
+                datesList.innerHTML = '';
+                if (state.datasDisponiveis.length === 0) {
+                    datesList.innerHTML = '<p class="text-secondary">Nenhuma data disponível.</p>';
+                    datesContainer.classList.remove('hidden');
+                    loadingDates.classList.add('hidden');
+                    return;
+                }
+                var diasSem = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+                state.datasDisponiveis.forEach(function(d) {
+                    var btn = document.createElement('button');
+                    btn.className = 'date-btn';
+                    var dateObj = new Date(d.data + 'T12:00:00');
+                    btn.innerHTML =
+                        '<span class="date-day">' + diasSem[dateObj.getDay()] + '</span>' +
+                        '<span class="date-num">' + String(dateObj.getDate()).padStart(2,'0') + '</span>' +
+                        '<span class="date-month">/' + String(dateObj.getMonth()+1).padStart(2,'0') + '</span>';
+                    btn.dataset.data = d.data;
+                    btn.addEventListener('click', function() { selecionarData(d.data); });
+                    datesList.appendChild(btn);
+                });
+                datesContainer.classList.remove('hidden');
+                loadingDates.classList.add('hidden');
+                if (state.datasDisponiveis.length > 0) {
+                    if (state.dataSelecionada && state.datasDisponiveis.some(function(d) { return d.data === state.dataSelecionada; })) {
+                        selecionarData(state.dataSelecionada);
+                    } else {
+                        selecionarData(state.datasDisponiveis[0].data);
+                    }
+                }
+            } catch (err) {
+                loadingDates.classList.add('hidden');
+                datesList.innerHTML = '<p class="text-danger">Erro ao carregar datas: ' + err.message + '</p>';
+                datesContainer.classList.remove('hidden');
+            }
+        }
+
+        async function selecionarData(data) {
+            state.dataSelecionada = data;
+            state.slotSelecionado = null;
+            document.getElementById('btn-continuar-step2').disabled = true;
+            document.querySelectorAll('.date-btn').forEach(function(b) {
+                b.classList.toggle('selected', b.dataset.data === data);
+            });
+            var loadingSlots = document.getElementById('loading-slots');
+            var slotsContainer = document.getElementById('slots-container');
+            var noSlots = document.getElementById('no-slots');
+            var slotsList = document.getElementById('slots-list');
+            loadingSlots.classList.remove('hidden');
+            slotsContainer.classList.add('hidden');
+            noSlots.classList.add('hidden');
+            try {
+                var servico = state.servicoSelecionado;
+                var duracao = (servico ? (servico.duracao_minutos || 0) : 0) + state.adicionaisSelecionados.reduce(function(acc, a) { return acc + (a.duracao_minutos || 0); }, 0);
+                if (duracao < 15) duracao = 30;
+                // Se não tem serviço principal, usar o primeiro adicional como referência para o servicoId
+                var servicoId = servico ? servico.id : (state.adicionaisSelecionados.length > 0 ? state.adicionaisSelecionados[0].id : null);
+                if (!servicoId) {
+                    slotsList.innerHTML = '<p class="text-secondary">Selecione um serviço primeiro.</p>';
+                    loadingSlots.classList.add('hidden');
+                    slotsContainer.classList.remove('hidden');
+                    return;
+                }
+                var response = await listarSlots(data, servicoId, duracao);
+                var slotsArray = response.slots || [];
+                slotsList.innerHTML = '';
+                if (slotsArray.length === 0) {
+                    noSlots.classList.remove('hidden');
+                } else {
+                    slotsArray.forEach(function(s) {
+                        var btn = document.createElement('button');
+                        btn.className = 'slot-btn';
+                        btn.textContent = s.horaInicio || s.horario || s.hora || '--:--';
+                        btn.dataset.horario = s.horaInicio || s.horario || s.hora || '';
+                        btn.addEventListener('click', function() {
+                            document.querySelectorAll('.slot-btn').forEach(function(b) { b.classList.remove('selected'); });
+                            btn.classList.add('selected');
+                            state.slotSelecionado = s;
+                            document.getElementById('btn-continuar-step2').disabled = false;
+                        });
+                        slotsList.appendChild(btn);
+                    });
+                    slotsContainer.classList.remove('hidden');
+                }
+            } catch (err) {
+                slotsList.innerHTML = '<p class="text-danger">Erro ao carregar horários: ' + err.message + '</p>';
+                slotsContainer.classList.remove('hidden');
+            }
+            loadingSlots.classList.add('hidden');
+        }
+
+        // ============ STEP 3: CONFIRMATION ============
+        function preencherConfirmacao() {
+            var s = state.servicoSelecionado;
+            var total = 0;
+            var duracao = 0;
+            var servicosStr = [];
+
+            if (s) {
+                total += parseFloat(s.valor || s.preco || 0);
+                duracao += s.duracao_minutos || 0;
+                servicosStr.push(s.nome);
+            }
+            state.adicionaisSelecionados.forEach(function(a) {
+                total += parseFloat(a.valor || a.preco || 0);
+                duracao += a.duracao_minutos || 0;
+                servicosStr.push(a.nome);
+            });
+            var adStr = state.adicionaisSelecionados.length > 0 ? state.adicionaisSelecionados.map(function(a) { return a.nome; }).join(', ') : 'Nenhum';
+            var dateObj = new Date(state.dataSelecionada + 'T12:00:00');
+            var dataFormatada = dateObj.toLocaleDateString('pt-BR');
+            var horario = state.slotSelecionado ? (state.slotSelecionado.horaInicio || state.slotSelecionado.horario || state.slotSelecionado.hora || '—') : '—';
+            document.getElementById('conf-servico').textContent = servicosStr.join(' + ');
+            document.getElementById('conf-adicionais').textContent = adStr;
+            document.getElementById('conf-data').textContent = dataFormatada;
+            document.getElementById('conf-horario').textContent = horario;
+            document.getElementById('conf-duracao').textContent = duracao + ' min';
+            document.getElementById('conf-valor').textContent = 'R$ ' + total.toFixed(2);
+            document.getElementById('cliente-nome').value = '';
+            document.getElementById('cliente-telefone').value = '';
+            document.getElementById('cliente-observacao').value = '';
+        }
+
+        // ============ CONFIRM ============
+        async function confirmarAgendamento() {
+            var nome = document.getElementById('cliente-nome').value.trim();
+            if (!nome || nome.length < 2) {
+                showToast('Por favor, informe seu nome.', 'error');
+                document.getElementById('cliente-nome').focus();
+                return;
+            }
+            var telefone = document.getElementById('cliente-telefone').value.trim();
+            if (!telefone) {
+                showToast('Por favor, informe seu telefone para contato.', 'error');
+                document.getElementById('cliente-telefone').focus();
+                return;
+            }
+            var btn = document.getElementById('btn-confirmar');
+            var loading = document.getElementById('conf-loading');
+            btn.classList.add('hidden');
+            loading.classList.remove('hidden');
+            try {
+                var servico = state.servicoSelecionado;
+                var horaStr = state.slotSelecionado ? (state.slotSelecionado.horaInicio || state.slotSelecionado.horario || state.slotSelecionado.hora || '00:00') : '00:00';
+                var dataHoraInicio = state.dataSelecionada + 'T' + horaStr + ':00';
+                var observacao = document.getElementById('cliente-observacao').value.trim();
+                var servicosAdicionaisIds = state.adicionaisSelecionados.map(function(a) { return a.id; }).join(',');
+
+                // Se não tem serviço principal, usa o primeiro adicional como principal
+                var servicoParaEnviar = servico ? servico.id : (state.adicionaisSelecionados.length > 0 ? state.adicionaisSelecionados[0].id : null);
+                if (!servicoParaEnviar) {
+                    showToast('Selecione pelo menos um serviço.', 'error');
+                    btn.classList.remove('hidden');
+                    loading.classList.add('hidden');
+                    return;
+                }
+
+                var result = await criarAgendamento({
+                    clienteNome: nome,
+                    servicoId: servicoParaEnviar,
+                    dataHoraInicio: dataHoraInicio,
+                    notaOpcional: observacao,
+                    telefoneContato: telefone,
+                    servicosAdicionais: servicosAdicionaisIds
+                });
+
+                state.agendamentoCriado = result;
+                showToast('✅ Agendamento confirmado com sucesso!', 'success');
+                mostrarSucesso(result, nome, observacao);
+            } catch (err) {
+                showToast(err.message || 'Erro ao confirmar agendamento.', 'error');
+            } finally {
+                btn.classList.remove('hidden');
+                loading.classList.add('hidden');
+            }
+        }
+
+        function marcarComprovanteEnviado() {
+            state.comprovanteEnviado = true;
+            document.getElementById('comprovante-liberado').classList.remove('hidden');
+        }
+
+        function pularComprovante() {
+            window.location.href = '/';
+        }
+
+        function mostrarSucesso(ag, nome, observacao) {
+            document.getElementById('step-3').classList.add('hidden');
+            document.getElementById('step-4').classList.remove('hidden');
+            document.querySelectorAll('.step').forEach(function(el) { el.classList.add('completed'); });
+
+            var agData = ag.agendamento || ag;
+            var hashId = agData.hashId || agData.codigo || agData.id || '—';
+            var servicoNome = agData.servico || (state.servicoSelecionado ? state.servicoSelecionado.nome : '');
+            var dataHoraInicio = agData.dataHoraInicio || (state.dataSelecionada + 'T' + (state.slotSelecionado ? (state.slotSelecionado.horaInicio || state.slotSelecionado.horario || '00:00') : '00:00'));
+
+            var dateObj = new Date(dataHoraInicio);
+            var dataFormatada = dateObj.toLocaleDateString('pt-BR');
+            var horaFormatada = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+            var total = 0;
+            if (state.servicoSelecionado) {
+                total += parseFloat(state.servicoSelecionado.valor || state.servicoSelecionado.preco || 0);
+            }
+            state.adicionaisSelecionados.forEach(function(a) { total += parseFloat(a.valor || a.preco || 0); });
+
+            document.getElementById('sucesso-codigo').textContent = hashId;
+            document.getElementById('sucesso-servico').textContent = servicoNome;
+            document.getElementById('sucesso-data').textContent = dataFormatada;
+            document.getElementById('sucesso-horario').textContent = horaFormatada;
+            document.getElementById('sucesso-valor').textContent = 'R$ ' + total.toFixed(2);
+
+            var servicosStr = state.servicoSelecionado ? state.servicoSelecionado.nome : '';
+            if (state.adicionaisSelecionados.length > 0) {
+                servicosStr += (servicosStr ? ' + ' : '') + state.adicionaisSelecionados.map(function(a) { return a.nome; }).join(', ');
+            }
+
+            var mensagem = '✂️ *Agendamento — Barbe City Jaraguá*\n' +
+                '──────────────────────────\n' +
+                '👤 *Cliente:* ' + nome + '\n' +
+                '📅 *Data:* ' + dataFormatada + '\n' +
+                '⏰ *Horário:* ' + horaFormatada + '\n' +
+                '💇‍♂️ *Serviço:* ' + servicosStr +
+                '\n💰 *Valor:* R$ ' + total.toFixed(2) +
+                (observacao ? '\n📝 *Obs:* ' + observacao : '') +
+                '\n──────────────────────────\n' +
+                '✝️ "Deus é Fiel"\n' +
+                '🔗 ' + window.location.origin + '/';
+
+            document.getElementById('whatsapp-link-final').href = 'https://wa.me/5511915040871?text=' + encodeURIComponent(mensagem);
+            document.getElementById('link-meu-agendamento').href = '/meu-agendamento?hash=' + hashId;
+
+            // Reset comprovante state
+            state.comprovanteEnviado = false;
+            document.getElementById('comprovante-liberado').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

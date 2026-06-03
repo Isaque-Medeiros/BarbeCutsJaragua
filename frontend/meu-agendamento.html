@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Agendamento — Barbe City Jaraguá</title>
+    <meta name="description" content="Consulte ou cancele seu agendamento na Barbe City Jaraguá pelo código ou telefone.">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="icon" href="/img/logo.jpeg" type="image/jpeg">
+</head>
+<body>
+    <nav class="navbar" id="navbar">
+        <div class="container">
+            <a href="/" class="navbar-brand">
+                <img src="/img/logo.jpeg" alt="BarbeCuts" class="navbar-logo">
+                <div class="navbar-brand-text">Barbe City<span>Jaraguá</span></div>
+            </a>
+            <div class="navbar-links">
+                <a href="/">Início</a>
+                <a href="/agendamento">Agendar</a>
+                <a href="/meu-agendamento" class="active">Meu Agendamento</a>
+                <a href="/agendamento" class="navbar-cta">✂️ Agendar Horário</a>
+            </div>
+            <button class="hamburger" id="hamburger" aria-label="Menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="mobile-overlay" id="mobile-overlay"></div>
+    <div class="mobile-menu" id="mobile-menu">
+        <a href="/">🏠 Início</a>
+        <a href="/agendamento">✂️ Agendar</a>
+        <a href="/meu-agendamento" class="active">🔍 Meu Agendamento</a>
+        <a href="/agendamento" class="navbar-cta" style="margin-top: 1rem; justify-content: center;">✂️ Agendar Horário</a>
+    </div>
+
+    <section class="page-section" style="padding-top: 7rem;">
+        <div class="container">
+            <div class="section-title reveal">
+                <span class="section-subtitle">Consulta</span>
+                <h2>🔍 Meu <span class="highlight">Agendamento</span></h2>
+                <div class="gold-divider"></div>
+                <p>Consulte ou cancele seu agendamento.</p>
+            </div>
+
+            <!-- Abas: Código / Telefone -->
+            <div class="consulta-tabs" style="max-width:500px;margin:0 auto 1.5rem;">
+                <button class="consulta-tab active" onclick="switchConsultaTab('codigo', this)">
+                    🔑 Código
+                </button>
+                <button class="consulta-tab" onclick="switchConsultaTab('telefone', this)">
+                    📱 Telefone
+                </button>
+            </div>
+
+            <!-- Painel: Busca por Código -->
+            <div class="consulta-tab-panel active" id="panel-codigo">
+                <div class="card consulta-card" style="max-width:500px;margin:0 auto;">
+                    <div class="card-header">
+                        <span class="card-title">🔑 Buscar por Código</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label" for="hash-input">Código do Agendamento</label>
+                            <input type="text" id="hash-input" class="form-input" placeholder="Ex: a1b2c3d4e5" maxlength="20" style="font-family:var(--font-mono);letter-spacing:2px;text-align:center;">
+                            <p class="form-hint">Informe o código de 10 caracteres que você recebeu.</p>
+                        </div>
+                        <button class="btn btn-primary btn-block" onclick="buscarPorCodigo()">
+                            🔍 Consultar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Painel: Busca por Telefone -->
+            <div class="consulta-tab-panel" id="panel-telefone">
+                <div class="card consulta-card" style="max-width:500px;margin:0 auto;">
+                    <div class="card-header">
+                        <span class="card-title">📱 Buscar por Telefone</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label" for="tel-input">Seu número de WhatsApp / Telefone</label>
+                            <input type="text" id="tel-input" class="form-input" placeholder="(11) 91504-0871" maxlength="20">
+                            <p class="form-hint">Informe o telefone usado no agendamento.</p>
+                        </div>
+                        <button class="btn btn-primary btn-block" onclick="buscarPorTelefone()">
+                            📱 Buscar Agendamentos
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Loading -->
+                <div id="loading-tel" class="loading hidden" style="max-width:500px;margin:1rem auto 0;"><div class="spinner"></div></div>
+
+                <!-- Error telefone -->
+                <div id="error-tel" class="card hidden" style="max-width:500px;margin:1rem auto 0;border-color:var(--danger);">
+                    <div class="card-body" style="text-align:center;">
+                        <div style="font-size:3rem;margin-bottom:0.5rem;">❌</div>
+                        <p id="tel-error-message" class="text-danger">Nenhum agendamento encontrado.</p>
+                    </div>
+                </div>
+
+                <!-- Resultados por telefone -->
+                <div id="result-tel" class="hidden" style="max-width:600px;margin:1.5rem auto 0;"></div>
+            </div>
+
+            <!-- Loading (hash) -->
+            <div id="loading-consulta" class="loading hidden"><div class="spinner"></div></div>
+
+            <!-- Error (hash) -->
+            <div id="error-consulta" class="card hidden" style="max-width:500px;margin:1rem auto 0;border-color:var(--danger);">
+                <div class="card-body" style="text-align:center;">
+                    <div style="font-size:3rem;margin-bottom:0.5rem;">❌</div>
+                    <p id="error-message" class="text-danger">Agendamento não encontrado.</p>
+                </div>
+            </div>
+
+            <!-- Result (hash) -->
+            <div id="result-consulta" class="hidden" style="max-width:500px;margin:1.5rem auto 0;">
+                <div class="resumo-card">
+                    <div class="resumo-row">
+                        <span class="resumo-label">Cliente</span>
+                        <span class="resumo-value" id="result-nome">—</span>
+                    </div>
+                    <div class="resumo-row">
+                        <span class="resumo-label">Serviço</span>
+                        <span class="resumo-value" id="result-servico">—</span>
+                    </div>
+                    <div class="resumo-row">
+                        <span class="resumo-label">Data</span>
+                        <span class="resumo-value" id="result-data">—</span>
+                    </div>
+                    <div class="resumo-row">
+                        <span class="resumo-label">Horário</span>
+                        <span class="resumo-value" id="result-horario">—</span>
+                    </div>
+                    <div class="resumo-row">
+                        <span class="resumo-label">Valor</span>
+                        <span class="resumo-value resumo-total" id="result-valor">—</span>
+                    </div>
+                    <div class="resumo-row">
+                        <span class="resumo-label">Status</span>
+                        <span class="resumo-value" id="result-status">—</span>
+                    </div>
+                </div>
+
+                <div id="cancel-container" class="hidden" style="margin-top:1rem;">
+                    <button class="btn btn-danger btn-block" onclick="cancelarAgendamento()">
+                        🗑️ Cancelar Agendamento
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Faith Section -->
+    <section class="faith-section faith-section-sm">
+        <div class="container">
+            <div class="faith-content">
+                <div class="faith-cross">✝️</div>
+                <h2 class="faith-title" style="font-size:1.6rem;">"Deus é Fiel"</h2>
+                <div class="faith-divider"></div>
+                <p class="faith-text">
+                    "Porque nele vivemos, e nos movemos, e existimos"<br>
+                    <span class="faith-ref">— Atos 17:28</span>
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand-section">
+                    <div class="footer-brand-title">✂️ Barbe City Jaraguá</div>
+                    <p class="footer-brand-desc">Tradição e estilo em cada corte.</p>
+                    <div class="footer-social">
+                        <a href="https://wa.me/5511915040871" target="_blank" title="WhatsApp">📱</a>
+                        <a href="https://www.instagram.com" target="_blank" title="Instagram">📷</a>
+                    </div>
+                </div>
+                <div>
+                    <h4>Links</h4>
+                    <ul class="footer-links">
+                        <li><a href="/">Início</a></li>
+                        <li><a href="/agendamento">Agendar Horário</a></li>
+                        <li><a href="/meu-agendamento">Meu Agendamento</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Contato</h4>
+                    <div class="footer-contact">
+                        <p>📱 <a href="https://wa.me/5511915040871" target="_blank">(11) 91504-0871</a></p>
+                        <p>📍 R. Jairo de Almeida Machado, 220 — Jaraguá</p>
+                        <p>🕐 Ter-Dom: 09h às 20h</p>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2026 Barbe City Jaraguá.</p>
+                <div class="footer-faith">
+                    <span class="footer-faith-cross">✝️</span>
+                    "Deus é Fiel"
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/js/api.js"></script>
+    <script>
+        let currentHash = '';
+        let currentPhoneResults = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const navbar = document.getElementById('navbar');
+            window.addEventListener('scroll', () => {
+                navbar.classList.toggle('scrolled', window.scrollY > 50);
+            });
+
+            const hamburger = document.getElementById('hamburger');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const overlay = document.getElementById('mobile-overlay');
+            
+            function toggleMenu() {
+                hamburger.classList.toggle('active');
+                mobileMenu.classList.toggle('open');
+                overlay.classList.toggle('open');
+                document.body.style.overflow = mobileMenu.classList.contains('open') ? 'hidden' : '';
+            }
+            
+            hamburger.addEventListener('click', toggleMenu);
+            overlay.addEventListener('click', toggleMenu);
+            mobileMenu.querySelectorAll('a').forEach(l => l.addEventListener('click', toggleMenu));
+
+            // Check for hash in URL
+            const params = new URLSearchParams(window.location.search);
+            const hashParam = params.get('hash');
+            const telParam = params.get('tel');
+            if (hashParam) {
+                document.getElementById('hash-input').value = hashParam;
+                buscarPorCodigo();
+            }
+            if (telParam) {
+                document.getElementById('tel-input').value = telParam;
+                const tabs = document.querySelectorAll('.consulta-tab');
+                switchConsultaTab('telefone', tabs[1]);
+                buscarPorTelefone();
+            }
+
+            // Enter key support
+            document.getElementById('hash-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') buscarPorCodigo();
+            });
+            document.getElementById('tel-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') buscarPorTelefone();
+            });
+        });
+
+        function switchConsultaTab(tab, btn) {
+            document.querySelectorAll('.consulta-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.consulta-tab-panel').forEach(p => p.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            document.getElementById('panel-' + tab).classList.add('active');
+        }
+
+        // ============ BUSCA POR CÓDIGO ============
+        // Renamed to avoid conflict with api.js consultarAgendamento()
+        async function buscarPorCodigo() {
+            const hash = document.getElementById('hash-input').value.trim();
+            if (!hash || hash.length < 5) {
+                mostrarToast('Informe o código do agendamento.', 'error');
+                return;
+            }
+
+            currentHash = hash;
+
+            const loading = document.getElementById('loading-consulta');
+            const result = document.getElementById('result-consulta');
+            const error = document.getElementById('error-consulta');
+            const cancelContainer = document.getElementById('cancel-container');
+
+            loading.classList.remove('hidden');
+            result.classList.add('hidden');
+            error.classList.add('hidden');
+            cancelContainer.classList.add('hidden');
+
+            try {
+                // Call the global function from api.js
+                const data = await window.consultarAgendamento(hash);
+                
+                if (!data || !data.agendamento) {
+                    throw new Error('Agendamento não encontrado.');
+                }
+                
+                const ag = data.agendamento;
+
+                document.getElementById('result-nome').textContent = ag.clienteNome || '—';
+
+                const servicoList = ag.servico || '—';
+                document.getElementById('result-servico').textContent = servicoList;
+
+                const dateStr = ag.dataHoraInicio || '';
+                if (dateStr) {
+                    const dateObj = new Date(dateStr);
+                    document.getElementById('result-data').textContent = dateObj.toLocaleDateString('pt-BR');
+                    document.getElementById('result-horario').textContent = 
+                        dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                } else {
+                    document.getElementById('result-data').textContent = '—';
+                    document.getElementById('result-horario').textContent = '—';
+                }
+
+                document.getElementById('result-valor').textContent = 
+                    `R$ ${parseFloat(ag.valor || 0).toFixed(2)}`;
+
+                const statusEl = document.getElementById('result-status');
+                const status = ag.status || 'agendado';
+                const statusLabels = { 'agendado': '🟡 Agendado', 'concluido': '✅ Concluído', 'cancelado': '❌ Cancelado', 'ausente': '⚪ Ausente' };
+                statusEl.textContent = statusLabels[status] || status;
+
+                result.classList.remove('hidden');
+
+                if (status === 'agendado') {
+                    cancelContainer.classList.remove('hidden');
+                }
+
+            } catch (err) {
+                document.getElementById('error-message').textContent = err.message || 'Agendamento não encontrado. Verifique o código.';
+                error.classList.remove('hidden');
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        // ============ BUSCA POR TELEFONE ============
+        async function buscarPorTelefone() {
+            const telefone = document.getElementById('tel-input').value.trim();
+            if (!telefone || telefone.length < 8) {
+                mostrarToast('Informe um número de telefone válido.', 'error');
+                return;
+            }
+
+            const loading = document.getElementById('loading-tel');
+            const errorDiv = document.getElementById('error-tel');
+            const resultDiv = document.getElementById('result-tel');
+            const errorMsg = document.getElementById('tel-error-message');
+
+            loading.classList.remove('hidden');
+            errorDiv.classList.add('hidden');
+            resultDiv.classList.add('hidden');
+
+            try {
+                const data = await buscarAgendamentosPorTelefone(telefone);
+                const agendamentos = data.agendamentos || [];
+                currentPhoneResults = agendamentos;
+
+                let html = '<div class="section-subtitle" style="margin-bottom:0.75rem;display:block;">📋 ' + agendamentos.length + ' agendamento(s) encontrado(s)</div>';
+
+                agendamentos.forEach(function(ag) {
+                    const status = ag.status || 'agendado';
+                    const statusLabels = { 'agendado': '🟡 Agendado', 'concluido': '✅ Concluído', 'cancelado': '❌ Cancelado', 'ausente': '⚪ Ausente' };
+                    const dateStr = ag.dataHoraInicio || '';
+                    let dataFormatada = '—';
+                    let horaFormatada = '—';
+                    if (dateStr) {
+                        const dateObj = new Date(dateStr);
+                        dataFormatada = dateObj.toLocaleDateString('pt-BR');
+                        horaFormatada = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    }
+
+                    html += '<div class="agendamento-list-item">' +
+                        '<div class="item-header">' +
+                            '<div class="item-nome">' + (ag.clienteNome || '—') + '</div>' +
+                            '<span class="item-status badge badge-' + status + '">' + (statusLabels[status] || status) + '</span>' +
+                        '</div>' +
+                        '<div class="item-detalhes">' +
+                            '<span>✂️ ' + (ag.servico || '—') + '</span>' +
+                            '<span>📅 ' + dataFormatada + '</span>' +
+                            '<span>⏰ ' + horaFormatada + '</span>' +
+                            '<span>💰 R$ ' + parseFloat(ag.valor || 0).toFixed(2) + '</span>' +
+                        '</div>';
+                    
+                    if (status === 'agendado') {
+                        html += '<div class="item-actions">' +
+                            '<button class="btn btn-sm btn-danger" onclick="cancelarPorTelefone(\'' + ag.hashId + '\')">🗑️ Cancelar</button>' +
+                            '<button class="btn btn-sm btn-secondary" onclick="copiarHash(\'' + ag.hashId + '\')">📋 Copiar Código</button>' +
+                        '</div>';
+                    }
+                    
+                    html += '</div>';
+                });
+
+                resultDiv.innerHTML = html;
+                resultDiv.classList.remove('hidden');
+            } catch (err) {
+                errorMsg.textContent = err.message || 'Nenhum agendamento encontrado para este telefone.';
+                errorDiv.classList.remove('hidden');
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        function copiarHash(hash) {
+            navigator.clipboard.writeText(hash).then(() => {
+                mostrarToast('✅ Código copiado: ' + hash, 'success');
+            }).catch(() => {
+                mostrarToast('📝 Código: ' + hash, 'info');
+            });
+        }
+
+        async function cancelarPorTelefone(hashId) {
+            if (!hashId) return;
+            if (!confirm('Tem certeza que deseja cancelar este agendamento?')) return;
+
+            try {
+                const result = await cancelarAgendamentoCliente(hashId);
+                mostrarToast('✅ Agendamento cancelado com sucesso!', 'success');
+                // Recarregar
+                buscarPorTelefone();
+            } catch (err) {
+                mostrarToast(err.message || 'Erro ao cancelar.', 'error');
+            }
+        }
+
+        // ============ CANCELAR (pelo código) ============
+        async function cancelarAgendamento() {
+            if (!currentHash) return;
+            
+            if (!confirm('Tem certeza que deseja cancelar este agendamento?')) return;
+
+            try {
+                const result = await cancelarAgendamentoCliente(currentHash);
+                mostrarToast('✅ Agendamento cancelado com sucesso!', 'success');
+                document.getElementById('cancel-container').classList.add('hidden');
+                document.getElementById('result-status').textContent = '❌ Cancelado';
+            } catch (err) {
+                mostrarToast(err.message || 'Erro ao cancelar.', 'error');
+            }
+        }
+    </script>
+</body>
+</html>
