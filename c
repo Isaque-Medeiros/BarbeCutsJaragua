@@ -13,7 +13,7 @@
         <div class="container">
             <a href="/" class="navbar-brand">
                 <img src="/img/logo.jpeg" alt="BarbeCuts" class="navbar-logo">
-                <div class="navbar-brand-text">BarbeCuts<span>Jaraguá</span></div>
+                <div class="navbar-brand-text">Barbe City<span>Jaraguá</span></div>
             </a>
             <div class="navbar-links">
                 <a href="/">Início</a>
@@ -98,7 +98,7 @@
         <div class="container">
             <div class="footer-grid">
                 <div class="footer-brand-section">
-                    <div class="footer-brand-title">✂️ BarbeCuts Jaraguá</div>
+                    <div class="footer-brand-title">✂️ Barbe City Jaraguá</div>
                     <p class="footer-brand-desc">Tradição e estilo em cada corte.</p>
                     <div class="footer-social">
                         <a href="https://wa.me/5511915040871" target="_blank">📱</a>
@@ -122,7 +122,7 @@
                     </div>
                 </div>
             </div>
-            <div class="footer-bottom"><p>© 2026 BarbeCuts Jaraguá.</p><div class="footer-faith">"Deus é Fiel" ✝️</div></div>
+            <div class="footer-bottom"><p>© 2026 Barbe City Jaraguá.</p><div class="footer-faith">"Deus é Fiel" ✝️</div></div>
         </div>
     </footer>
 
